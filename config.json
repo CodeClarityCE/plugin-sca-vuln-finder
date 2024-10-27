@@ -1,0 +1,11 @@
+{
+    "name": "js-vuln-finder",
+    "version": "v0.0.2",
+    "image_name": "ceherzog/plugin-js-vuln-finder",
+    "image_version": "0.0.2",
+    "depends_on": [
+        "js-sbom"
+    ],
+    "description": "A plugin to find vulnerabilities in a JavaScript project",
+    "config": {}
+}
