@@ -6,7 +6,7 @@ services:
       target: plugin-dev
       args:
         - PLUGINNAME=js-vuln-finder
-    image: ceherzog/js-vuln-finder-dev:latest
+    image: codeclarityce/js-vuln-finder-dev:latest
     restart: always
     volumes:
       - ../../backend:/codeclarity
