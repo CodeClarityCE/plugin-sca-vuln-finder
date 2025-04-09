@@ -10,7 +10,7 @@ require (
 	github.com/CodeClarityCE/utility-amqp-helper v0.0.1-alpha
 	github.com/CodeClarityCE/utility-dbhelper v0.0.2-alpha
 	github.com/CodeClarityCE/utility-node-semver v0.0.1-alpha
-	github.com/CodeClarityCE/utility-types v0.0.3-alpha
+	github.com/CodeClarityCE/utility-types v0.0.4-alpha
 	github.com/google/uuid v1.6.0
 	github.com/package-url/packageurl-go v0.1.3
 	github.com/pandatix/go-cvss v0.6.2
