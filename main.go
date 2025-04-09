@@ -109,6 +109,15 @@ func startAnalysis(args Arguments, dispatcherMessage types_amqp.DispatcherPlugin
 	if err != nil {
 		panic(err)
 	}
+
+	project := codeclarity.Project{
+		Id: *analysis_document.ProjectId,
+	}
+	err = args.codeclarity.NewSelect().Model(&project).WherePK().Scan(context.Background())
+	if err != nil {
+		panic(err)
+	}
+
 	sbom := sbom.Output{}
 	err = json.Unmarshal(res.Result.([]byte), &sbom)
 	if err != nil {
@@ -119,7 +128,7 @@ func startAnalysis(args Arguments, dispatcherMessage types_amqp.DispatcherPlugin
 		// return outputGenerator.FailureOutput(nil, start)
 		vulnOutput = outputGenerator.FailureOutput(sbom.AnalysisInfo, start)
 	} else {
-		vulnOutput = vulnerabilities.Start(sbom, "JS", start, args.knowledge)
+		vulnOutput = vulnerabilities.Start(project.Url, sbom, "JS", start, args.knowledge)
 	}
 
 	vuln_result := codeclarity.Result{
