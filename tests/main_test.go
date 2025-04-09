@@ -33,7 +33,7 @@ func TestCreateNPMv1(t *testing.T) {
 		t.Errorf("Error getting mock SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start(sbom, "JS", time.Now(), db_knowledge)
+	out := vulnerabilities.Start("", sbom, "JS", time.Now(), db_knowledge)
 
 	// Assert the expected values
 	assert.NotNil(t, out)
@@ -61,7 +61,7 @@ func TestCreateNPMv2(t *testing.T) {
 		t.Errorf("Error getting mock SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start(sbom, "JS", time.Now(), db_knowledge)
+	out := vulnerabilities.Start("", sbom, "JS", time.Now(), db_knowledge)
 
 	// Assert the expected values
 	assert.NotNil(t, out)
@@ -89,7 +89,7 @@ func TestCreateYarnv1(t *testing.T) {
 		t.Errorf("Error getting mock SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start(sbom, "JS", time.Now(), db_knowledge)
+	out := vulnerabilities.Start("", sbom, "JS", time.Now(), db_knowledge)
 
 	// Assert the expected values
 	assert.NotNil(t, out)
@@ -117,7 +117,7 @@ func TestCreateYarnv2(t *testing.T) {
 		t.Errorf("Error getting mock SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start(sbom, "JS", time.Now(), db_knowledge)
+	out := vulnerabilities.Start("", sbom, "JS", time.Now(), db_knowledge)
 
 	// Assert the expected values
 	assert.NotNil(t, out)
@@ -145,7 +145,7 @@ func TestCreateYarnv3(t *testing.T) {
 		t.Errorf("Error getting mock SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start(sbom, "JS", time.Now(), db_knowledge)
+	out := vulnerabilities.Start("", sbom, "JS", time.Now(), db_knowledge)
 
 	// Assert the expected values
 	assert.NotNil(t, out)
@@ -173,7 +173,7 @@ func TestCreateYarnv4(t *testing.T) {
 		t.Errorf("Error getting mock SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start(sbom, "JS", time.Now(), db_knowledge)
+	out := vulnerabilities.Start("", sbom, "JS", time.Now(), db_knowledge)
 
 	// Assert the expected values
 	assert.NotNil(t, out)
