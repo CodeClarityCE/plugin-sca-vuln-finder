@@ -14,12 +14,11 @@ func GetVulnsByDepName(depName string, knowledge *bun.DB) ([]knowledge_db.NVDIte
 
 	// TODO avoid SQL injection
 	rows, err := knowledge.QueryContext(ctx, `
-		WITH preselect AS(SELECT *, jsonb_path_query("affectedFlattened", '$[*].criteriaDict.product ?(@=="`+depName+`")')
-		FROM nvd)
-
-		SELECT DISTINCT id, nvd_id, "sourceIdentifier", published, "lastModified", "vulnStatus", descriptions, metrics, weaknesses, configurations, "affectedFlattened", affected, "references"
-		FROM preselect
-		WHERE "vulnStatus" = 'Analyzed' OR "vulnStatus" = 'Modified'
+	SELECT DISTINCT id, nvd_id, "sourceIdentifier", published, "lastModified", "vulnStatus", descriptions, metrics, weaknesses, configurations, "affectedFlattened", affected, "references"
+	FROM nvd
+	WHERE 
+	("affectedFlattened" @> '[{"criteriaDict": {"product": "`+depName+`"}}]')
+	AND ("vulnStatus" = 'Analyzed' OR "vulnStatus" = 'Modified');
 	`)
 	if err != nil {
 		panic(err)
