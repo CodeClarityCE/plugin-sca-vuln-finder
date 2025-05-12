@@ -1,10 +1,11 @@
 package cpe
 
 import (
+	"slices"
+
 	ecosystemTypes "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/ecosystemAnalyzer/types"
 	vulnerabilityFinder "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/types"
 	knowledge "github.com/CodeClarityCE/utility-types/knowledge_db"
-	"golang.org/x/exp/slices"
 )
 
 // InferEcosystemCpeTarget infers the ecosystem based on the given NVD vulnerability match.

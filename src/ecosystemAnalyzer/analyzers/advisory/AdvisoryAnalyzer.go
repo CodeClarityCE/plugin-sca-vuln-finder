@@ -5,9 +5,10 @@ import (
 	"net/url"
 	"strings"
 
+	"slices"
+
 	ecosystemTypes "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/ecosystemAnalyzer/types"
 	vulnerabilityFinder "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/types"
-	"golang.org/x/exp/slices"
 )
 
 // InferEcosystemAdvisoryUrlExtractor extracts the ecosystem types based on the advisory URLs in the given NVD vulnerability match.
