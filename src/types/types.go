@@ -171,16 +171,23 @@ type Vulnerability struct {
 	AffectedDependency string
 	AffectedVersion    string
 	VulnerabilityId    string
-	OSVMatch           OSVVulnerability
-	NVDMatch           NVDVulnerability
+	OSVMatch           *OSVVulnerability `json:"OSVMatch,omitempty"`
+	NVDMatch           *NVDVulnerability `json:"NVDMatch,omitempty"`
 	Severity           VulnerabilityMatchSeverity
 	Weaknesses         []VulnerabilityMatchWeakness
+	Conflict           Conflict
+}
+
+type Conflict struct {
+	ConflictWinner conflict.ResolveWinner
+	ConflictFlag   conflict.ConflictFlag
 }
 
 type Pairs struct {
-	NVD      NVDVulnerability
-	OSV      OSVVulnerability
-	Conflict conflict.ResolveWinner
+	NVD            NVDVulnerability
+	OSV            OSVVulnerability
+	ConflictWinner conflict.ResolveWinner
+	ConflictFlag   conflict.ConflictFlag
 }
 
 func ConvertOutputToMap(output Output) map[string]interface{} {
