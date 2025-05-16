@@ -182,3 +182,87 @@ func TestCreateYarnv4(t *testing.T) {
 
 	WriteJSON(out, "../../js-sbom/tests/yarnv4/vulns.json")
 }
+
+func TestCreateYarnWorkspace(t *testing.T) {
+	os.Setenv("NPM_URL", "https://replicate.npmjs.com/")
+
+	os.Setenv("PG_DB_HOST", "127.0.0.1")
+	os.Setenv("PG_DB_PORT", "5432")
+	os.Setenv("PG_DB_USER", "postgres")
+	os.Setenv("PG_DB_PASSWORD", "!ChangeMe!")
+
+	dsn_knowledge := "postgres://postgres:!ChangeMe!@127.0.0.1:5432/" + dbhelper.Config.Database.Knowledge + "?sslmode=disable"
+	sqldb_knowledge := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn_knowledge), pgdriver.WithTimeout(50*time.Second)))
+	db_knowledge := bun.NewDB(sqldb_knowledge, pgdialect.New())
+	defer db_knowledge.Close()
+
+	sbom, err := getSBOM("../../js-sbom/tests/yarn_workspace")
+	if err != nil {
+		t.Errorf("Error getting mock SBOM: %v", err)
+	}
+
+	out := vulnerabilities.Start("", sbom, "JS", time.Now(), db_knowledge)
+
+	// Assert the expected values
+	assert.NotNil(t, out)
+	assert.Equal(t, codeclarity.SUCCESS, out.AnalysisInfo.Status)
+	assert.NotEmpty(t, out.WorkSpaces)
+
+	WriteJSON(out, "../../js-sbom/tests/yarn_workspace/vulns.json")
+}
+
+func TestCreatePNPMv10_10(t *testing.T) {
+	os.Setenv("NPM_URL", "https://replicate.npmjs.com/")
+
+	os.Setenv("PG_DB_HOST", "127.0.0.1")
+	os.Setenv("PG_DB_PORT", "5432")
+	os.Setenv("PG_DB_USER", "postgres")
+	os.Setenv("PG_DB_PASSWORD", "!ChangeMe!")
+
+	dsn_knowledge := "postgres://postgres:!ChangeMe!@127.0.0.1:5432/" + dbhelper.Config.Database.Knowledge + "?sslmode=disable"
+	sqldb_knowledge := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn_knowledge), pgdriver.WithTimeout(50*time.Second)))
+	db_knowledge := bun.NewDB(sqldb_knowledge, pgdialect.New())
+	defer db_knowledge.Close()
+
+	sbom, err := getSBOM("../../js-sbom/tests/pnpmv10.10")
+	if err != nil {
+		t.Errorf("Error getting mock SBOM: %v", err)
+	}
+
+	out := vulnerabilities.Start("", sbom, "JS", time.Now(), db_knowledge)
+
+	// Assert the expected values
+	assert.NotNil(t, out)
+	assert.Equal(t, codeclarity.SUCCESS, out.AnalysisInfo.Status)
+	assert.NotEmpty(t, out.WorkSpaces)
+
+	WriteJSON(out, "../../js-sbom/tests/pnpmv10.10/vulns.json")
+}
+
+func TestCreateTest(t *testing.T) {
+	os.Setenv("NPM_URL", "https://replicate.npmjs.com/")
+
+	os.Setenv("PG_DB_HOST", "127.0.0.1")
+	os.Setenv("PG_DB_PORT", "5432")
+	os.Setenv("PG_DB_USER", "postgres")
+	os.Setenv("PG_DB_PASSWORD", "!ChangeMe!")
+
+	dsn_knowledge := "postgres://postgres:!ChangeMe!@127.0.0.1:5432/" + dbhelper.Config.Database.Knowledge + "?sslmode=disable"
+	sqldb_knowledge := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn_knowledge), pgdriver.WithTimeout(50*time.Second)))
+	db_knowledge := bun.NewDB(sqldb_knowledge, pgdialect.New())
+	defer db_knowledge.Close()
+
+	sbom, err := getSBOM("../../js-sbom/tests/test")
+	if err != nil {
+		t.Errorf("Error getting mock SBOM: %v", err)
+	}
+
+	out := vulnerabilities.Start("", sbom, "JS", time.Now(), db_knowledge)
+
+	// Assert the expected values
+	assert.NotNil(t, out)
+	assert.Equal(t, codeclarity.SUCCESS, out.AnalysisInfo.Status)
+	assert.NotEmpty(t, out.WorkSpaces)
+
+	WriteJSON(out, "../../js-sbom/tests/test/vulns.json")
+}
