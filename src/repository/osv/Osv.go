@@ -18,7 +18,7 @@ func GetAllOSVReportsForPurl(purl string, knowledge *bun.DB) ([]knowledge_db.OSV
 	// TODO avoid SQL injection
 	// ("@purl IN osv_report.affected[*].package.purl")
 	rows, err := knowledge.QueryContext(ctx, `
-		SELECT DISTINCT "id", "osv_id", "schema_version", "modified", "published", "withdrawn", "aliases", "related", "summary", "details", "severity", "affected", "references", "credits", "database_specific", "cwes", "cve"
+		SELECT DISTINCT "id", "osv_id", "schema_version", "modified", "published", "withdrawn", "aliases", "related", "summary", "details", "severity", "affected", "references", "credits", "database_specific", "cwes", "cve", vlai_score, vlai_confidence
 		FROM osv
 		WHERE ("affected" @> '[{"package": {"purl": "`+purl+`"}}]')
 	`)
