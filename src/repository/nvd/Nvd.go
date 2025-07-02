@@ -14,7 +14,7 @@ func GetVulnsByDepName(depName string, knowledge *bun.DB) ([]knowledge_db.NVDIte
 
 	// TODO avoid SQL injection
 	rows, err := knowledge.QueryContext(ctx, `
-	SELECT DISTINCT id, nvd_id, "sourceIdentifier", published, "lastModified", "vulnStatus", descriptions, metrics, weaknesses, configurations, "affectedFlattened", affected, "references"
+	SELECT DISTINCT id, nvd_id, "sourceIdentifier", published, "lastModified", "vulnStatus", descriptions, metrics, weaknesses, configurations, "affectedFlattened", affected, "references", vlai_score, vlai_confidence
 	FROM nvd
 	WHERE 
 	("affectedFlattened" @> '[{"criteriaDict": {"product": "`+depName+`"}}]')
