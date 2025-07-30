@@ -135,6 +135,7 @@ func startAnalysis(args Arguments, dispatcherMessage types_amqp.DispatcherPlugin
 		Result:     vulnerabilityFinder.ConvertOutputToMap(vulnOutput),
 		AnalysisId: dispatcherMessage.AnalysisId,
 		Plugin:     config.Name,
+		CreatedOn:  time.Now(),
 	}
 	_, err = args.codeclarity.NewInsert().Model(&vuln_result).Exec(context.Background())
 	if err != nil {
