@@ -151,7 +151,6 @@ func startAnalysis(args Arguments, dispatcherMessage types_amqp.DispatcherPlugin
 		// Extract vulnerabilities from output map
 		workspacesAny := vulnerabilityFinder.ConvertOutputToMap(vulnOutput)["workspaces"]
 		severityCounts := map[string]int{"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "NONE": 0}
-		var total int
 		type topVuln struct {
 			VulnerabilityId string  `json:"vulnerability_id"`
 			Dependency      string  `json:"dependency"`
@@ -159,17 +158,34 @@ func startAnalysis(args Arguments, dispatcherMessage types_amqp.DispatcherPlugin
 			SeverityClass   string  `json:"severity_class"`
 			SeverityScore   float64 `json:"severity_score"`
 		}
-		var tops []topVuln
+
+		// Track unique vulnerabilities to avoid double counting
+		uniqueVulns := make(map[string]topVuln)
+
 		if workspaces, ok := workspacesAny.(map[string]vulnerabilityFinder.Workspace); ok {
 			for _, ws := range workspaces {
 				for _, v := range ws.Vulnerabilities {
-					severityCounts[string(v.Severity.SeverityClass)]++
-					total++
-					if len(tops) < 50 { // collect up to 50 then trim
-						tops = append(tops, topVuln{v.VulnerabilityId, v.AffectedDependency, v.AffectedVersion, string(v.Severity.SeverityClass), v.Severity.Severity})
+					// Only count each unique vulnerability ID once
+					if existing, exists := uniqueVulns[v.VulnerabilityId]; !exists || v.Severity.Severity > existing.SeverityScore {
+						// If new vulnerability or higher severity version found, use it
+						uniqueVulns[v.VulnerabilityId] = topVuln{
+							VulnerabilityId: v.VulnerabilityId,
+							Dependency:      v.AffectedDependency,
+							AffectedVersion: v.AffectedVersion,
+							SeverityClass:   string(v.Severity.SeverityClass),
+							SeverityScore:   v.Severity.Severity,
+						}
 					}
 				}
 			}
+
+			// Count unique vulnerabilities by severity
+			var tops []topVuln
+			for _, vuln := range uniqueVulns {
+				severityCounts[vuln.SeverityClass]++
+				tops = append(tops, vuln)
+			}
+			total := len(uniqueVulns)
 			// sort by severity desc
 			sort.Slice(tops, func(i, j int) bool { return tops[i].SeverityScore > tops[j].SeverityScore })
 			if len(tops) > 5 {
