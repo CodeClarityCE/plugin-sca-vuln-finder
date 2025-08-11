@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sort"
 	"time"
 
 	sbom "github.com/CodeClarityCE/plugin-sbom-javascript/src/types/sbom/js"
@@ -17,7 +18,6 @@ import (
 	dbhelper "github.com/CodeClarityCE/utility-dbhelper/helper"
 	types_amqp "github.com/CodeClarityCE/utility-types/amqp"
 	codeclarity "github.com/CodeClarityCE/utility-types/codeclarity_db"
-	"github.com/CodeClarityCE/utility-types/exceptions"
 	exceptionManager "github.com/CodeClarityCE/utility-types/exceptions"
 	plugin "github.com/CodeClarityCE/utility-types/plugin_db"
 	"github.com/google/uuid"
@@ -122,8 +122,8 @@ func startAnalysis(args Arguments, dispatcherMessage types_amqp.DispatcherPlugin
 	err = json.Unmarshal(res.Result.([]byte), &sbom)
 	if err != nil {
 		exceptionManager.AddError(
-			"", exceptions.GENERIC_ERROR,
-			fmt.Sprintf("Error when reading sbom output: %s", err), exceptions.FAILED_TO_READ_PREVIOUS_STAGE_OUTPUT,
+			"", exceptionManager.GENERIC_ERROR,
+			fmt.Sprintf("Error when reading sbom output: %s", err), exceptionManager.FAILED_TO_READ_PREVIOUS_STAGE_OUTPUT,
 		)
 		// return outputGenerator.FailureOutput(nil, start)
 		vulnOutput = outputGenerator.FailureOutput(sbom.AnalysisInfo, start)
@@ -143,10 +143,60 @@ func startAnalysis(args Arguments, dispatcherMessage types_amqp.DispatcherPlugin
 	}
 
 	// Prepare the result to store in step
-	// In this case we only store the sbomKey
-	// The other plugins will use this key to get the sbom
 	result := make(map[string]any)
 	result["vulnKey"] = vuln_result.Id
+
+	// Build vuln summary for notifier
+	if vulnOutput.AnalysisInfo.Status == codeclarity.SUCCESS {
+		// Extract vulnerabilities from output map
+		workspacesAny := vulnerabilityFinder.ConvertOutputToMap(vulnOutput)["workspaces"]
+		severityCounts := map[string]int{"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "NONE": 0}
+		var total int
+		type topVuln struct {
+			VulnerabilityId string  `json:"vulnerability_id"`
+			Dependency      string  `json:"dependency"`
+			AffectedVersion string  `json:"affected_version"`
+			SeverityClass   string  `json:"severity_class"`
+			SeverityScore   float64 `json:"severity_score"`
+		}
+		var tops []topVuln
+		if workspaces, ok := workspacesAny.(map[string]vulnerabilityFinder.Workspace); ok {
+			for _, ws := range workspaces {
+				for _, v := range ws.Vulnerabilities {
+					severityCounts[string(v.Severity.SeverityClass)]++
+					total++
+					if len(tops) < 50 { // collect up to 50 then trim
+						tops = append(tops, topVuln{v.VulnerabilityId, v.AffectedDependency, v.AffectedVersion, string(v.Severity.SeverityClass), v.Severity.Severity})
+					}
+				}
+			}
+			// sort by severity desc
+			sort.Slice(tops, func(i, j int) bool { return tops[i].SeverityScore > tops[j].SeverityScore })
+			if len(tops) > 5 {
+				tops = tops[:5]
+			}
+			maxSeverity := "NONE"
+			for _, order := range []string{"CRITICAL", "HIGH", "MEDIUM", "LOW"} {
+				if severityCounts[order] > 0 {
+					maxSeverity = order
+					break
+				}
+			}
+			notif := map[string]any{
+				"type":            "vuln_summary",
+				"analysis_id":     dispatcherMessage.AnalysisId,
+				"organization_id": analysis_document.OrganizationId,
+				"project_id":      analysis_document.ProjectId,
+				"project_name":    project.Name,
+				"total":           total,
+				"severity_counts": severityCounts,
+				"max_severity":    maxSeverity,
+				"top":             tops,
+			}
+			data, _ := json.Marshal(notif)
+			amqp_helper.Send("service_notifier", data)
+		}
+	}
 
 	// The output is always a map[string]any
 	return result, vulnOutput.AnalysisInfo.Status, nil
