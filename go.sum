@@ -1,7 +1,7 @@
 github.com/CodeClarityCE/plugin-sbom-javascript v0.0.18-alpha h1:EOKkiE2NhfhBaP095R/WKGh2AoTNoyOWHYtYkQQYsoU=
 github.com/CodeClarityCE/plugin-sbom-javascript v0.0.18-alpha/go.mod h1:/wsv/WMzB08wi6sGQDfzsiane4dn6IxGgmp7FGCAwpQ=
-github.com/CodeClarityCE/service-knowledge v0.0.17-alpha h1:95yIXU/xGvfyl1W4Piw50blHvOddfqGI3EOG1yd9zeU=
-github.com/CodeClarityCE/service-knowledge v0.0.17-alpha/go.mod h1:m6ieTSehOcGsKCAbc/Dcm/zGA5CnlruLR8JYjtkLE1Q=
+github.com/CodeClarityCE/service-knowledge v0.0.18-alpha h1:JgjBdGlK0J8xqWR6oMkhe3w+zxcQTLc4TxOxWIIT0GQ=
+github.com/CodeClarityCE/service-knowledge v0.0.18-alpha/go.mod h1:/HHwhIhgNROdBucW5NZEFmlvED7R46QxT/wnQIroWcg=
 github.com/CodeClarityCE/utility-amqp-helper v0.0.6-alpha h1:GoUTO+ADeFtQM9nFJRCJLgwoIPsSM5fkovNTaldROL0=
 github.com/CodeClarityCE/utility-amqp-helper v0.0.6-alpha/go.mod h1:fUDcdrVyeoVqzxCkbHWsdbhBHp1d6gvq3QFtQ5E3ptI=
 github.com/CodeClarityCE/utility-dbhelper v0.0.8-alpha h1:pvHAWe6J3yBr+JKTvx719B3C03f8C0/Ut7h3Dmn5iuU=
