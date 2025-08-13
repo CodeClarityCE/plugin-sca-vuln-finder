@@ -1,11 +1,17 @@
 {
     "name": "vuln-finder",
+<<<<<<< Updated upstream
     "version": "v0.0.17-alpha",
     "image_name": "codeclarityce/plugin-vuln-finder",
     "depends_on": [
         "js-sbom",
         "php-sbom"
     ],
+=======
+    "version": "v0.0.18-alpha",
+    "image_name": "codeclarityce/plugin-vuln-finder",
+    "depends_on": [],
+>>>>>>> Stashed changes
     "description": "A plugin to find vulnerabilities in JavaScript and PHP projects",
     "config": {}
 }

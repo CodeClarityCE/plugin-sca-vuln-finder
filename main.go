@@ -86,59 +86,101 @@ func startAnalysis(args Arguments, dispatcherMessage types_amqp.DispatcherPlugin
 	// Prepare the arguments for the plugin
 	// Get previous stage
 	analysis_stage := analysis_document.Stage - 1
+<<<<<<< Updated upstream
 	// Get sbomKey from previous stage - support both js-sbom and php-sbom
 	sbomKey := uuid.UUID{}
 	detectedLanguage := ""
+=======
+	// Get all SBOM keys from previous stage
+	sbomKeys := []struct {
+		id       uuid.UUID
+		language string
+		pluginName string
+	}{}
+	
+>>>>>>> Stashed changes
 	for _, step := range analysis_document.Steps[analysis_stage] {
 		if step.Name == "js-sbom" {
 			sbomKeyUUID, err := uuid.Parse(step.Result["sbomKey"].(string))
 			if err != nil {
 				panic(err)
 			}
+<<<<<<< Updated upstream
 			sbomKey = sbomKeyUUID
 			detectedLanguage = "JS"
 			break
+=======
+			sbomKeys = append(sbomKeys, struct {
+				id       uuid.UUID
+				language string
+				pluginName string
+			}{sbomKeyUUID, "JS", "js-sbom"})
+>>>>>>> Stashed changes
 		} else if step.Name == "php-sbom" {
 			sbomKeyUUID, err := uuid.Parse(step.Result["sbomKey"].(string))
 			if err != nil {
 				panic(err)
 			}
+<<<<<<< Updated upstream
 			sbomKey = sbomKeyUUID
 			detectedLanguage = "PHP"
 			break
+=======
+			sbomKeys = append(sbomKeys, struct {
+				id       uuid.UUID
+				language string
+				pluginName string
+			}{sbomKeyUUID, "PHP", "php-sbom"})
+>>>>>>> Stashed changes
 		}
 	}
 
 	var vulnOutput vulnerabilityFinder.Output
 	start := time.Now()
-
-	res := codeclarity.Result{
-		Id: sbomKey,
-	}
-	err := args.codeclarity.NewSelect().Model(&res).Where("id = ?", sbomKey).Scan(context.Background())
-	if err != nil {
-		panic(err)
-	}
-
+	
+	// Get project info (needed for both success and failure cases)
 	project := codeclarity.Project{
 		Id: *analysis_document.ProjectId,
 	}
-	err = args.codeclarity.NewSelect().Model(&project).WherePK().Scan(context.Background())
+	err := args.codeclarity.NewSelect().Model(&project).WherePK().Scan(context.Background())
 	if err != nil {
 		panic(err)
 	}
-
-	sbom := sbom.Output{}
-	err = json.Unmarshal(res.Result.([]byte), &sbom)
-	if err != nil {
-		exceptionManager.AddError(
-			"", exceptionManager.GENERIC_ERROR,
-			fmt.Sprintf("Error when reading sbom output: %s", err), exceptionManager.FAILED_TO_READ_PREVIOUS_STAGE_OUTPUT,
-		)
-		// return outputGenerator.FailureOutput(nil, start)
-		vulnOutput = outputGenerator.FailureOutput(sbom.AnalysisInfo, start)
+	
+	// If no SBOMs were found, return success with empty results
+	if len(sbomKeys) == 0 {
+		vulnOutput = outputGenerator.SuccessOutput(map[string]vulnerabilityFinder.Workspace{}, sbom.AnalysisInfo{
+			Status: codeclarity.SUCCESS,
+		}, start)
 	} else {
+<<<<<<< Updated upstream
 		vulnOutput = vulnerabilities.Start(project.Url, sbom, detectedLanguage, start, args.knowledge)
+=======
+
+		// Process the first available SBOM (for now, we'll process just the first one)
+		// In the future, this could be enhanced to merge multiple SBOM results
+		sbomInfo := sbomKeys[0]
+		
+		res := codeclarity.Result{
+			Id: sbomInfo.id,
+		}
+		err = args.codeclarity.NewSelect().Model(&res).Where("id = ?", sbomInfo.id).Scan(context.Background())
+		if err != nil {
+			panic(err)
+		}
+
+		sbom := sbom.Output{}
+		err = json.Unmarshal(res.Result.([]byte), &sbom)
+		if err != nil {
+			exceptionManager.AddError(
+				"", exceptionManager.GENERIC_ERROR,
+				fmt.Sprintf("Error when reading %s output: %s", sbomInfo.pluginName, err), exceptionManager.FAILED_TO_READ_PREVIOUS_STAGE_OUTPUT,
+			)
+			vulnOutput = outputGenerator.FailureOutput(sbom.AnalysisInfo, start)
+		} else {
+			vulnOutput = vulnerabilities.Start(project.Url, sbom, sbomInfo.language, start, args.knowledge)
+		}
+>>>>>>> Stashed changes
 	}
 
 	vuln_result := codeclarity.Result{

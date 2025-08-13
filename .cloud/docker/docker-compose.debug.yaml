@@ -1,8 +1,8 @@
 services:
-  plugin-js-vuln-finder:
+  plugin-vuln-finder:
     # For dev we keep the golang container and install devtools
     build:
       target: plugin-debug
-    image: codeclarityce/js-vuln-finder-debug:latest
+    image: codeclarityce/vuln-finder-debug:latest
     ports:
       - 40000:40000
