@@ -13,6 +13,7 @@ import (
 	ecosystemTypes "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/ecosystemAnalyzer/types"
 	outputGenerator "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/outputGenerator"
 	npmRepository "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/repository/npm"
+	phpRepository "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/repository/php"
 	vulnerabilityFinder "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/types"
 	vulnerabilitylookup "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/vulnerabilityLookup"
 	codeclarity "github.com/CodeClarityCE/utility-types/codeclarity_db"
@@ -37,6 +38,12 @@ func Start(projectURL string, sbom sbomTypes.Output, languageId string, start ti
 			Ecosystems:        []ecosystemTypes.Ecosystem{ecosystemTypes.NODEJS_OR_JS},
 			ConflictResolver:  conflictResolver.TrustOSV,
 			PackageRepository: npmRepository.NpmPackageRepository,
+		}
+	} else if languageId == "PHP" {
+		vulnerabilityMatcher = matcher.VulnerabilityMatcher{
+			Ecosystems:        []ecosystemTypes.Ecosystem{ecosystemTypes.PHP},
+			ConflictResolver:  conflictResolver.TrustOSV,
+			PackageRepository: phpRepository.PhpPackageRepository,
 		}
 	} else {
 		exceptionManager.AddError("", exceptionManager.UNSUPPORTED_LANGUAGE_REQUESTED, "", exceptionManager.UNSUPPORTED_LANGUAGE_REQUESTED)

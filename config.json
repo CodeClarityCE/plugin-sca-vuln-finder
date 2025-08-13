@@ -1,10 +1,11 @@
 {
-    "name": "js-vuln-finder",
-    "version": "v0.0.16-alpha",
-    "image_name": "codeclarityce/plugin-js-vuln-finder",
+    "name": "vuln-finder",
+    "version": "v0.0.17-alpha",
+    "image_name": "codeclarityce/plugin-vuln-finder",
     "depends_on": [
-        "js-sbom"
+        "js-sbom",
+        "php-sbom"
     ],
-    "description": "A plugin to find vulnerabilities in a JavaScript project",
+    "description": "A plugin to find vulnerabilities in JavaScript and PHP projects",
     "config": {}
 }

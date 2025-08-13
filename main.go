@@ -86,8 +86,9 @@ func startAnalysis(args Arguments, dispatcherMessage types_amqp.DispatcherPlugin
 	// Prepare the arguments for the plugin
 	// Get previous stage
 	analysis_stage := analysis_document.Stage - 1
-	// Get sbomKey from previous stage
+	// Get sbomKey from previous stage - support both js-sbom and php-sbom
 	sbomKey := uuid.UUID{}
+	detectedLanguage := ""
 	for _, step := range analysis_document.Steps[analysis_stage] {
 		if step.Name == "js-sbom" {
 			sbomKeyUUID, err := uuid.Parse(step.Result["sbomKey"].(string))
@@ -95,6 +96,15 @@ func startAnalysis(args Arguments, dispatcherMessage types_amqp.DispatcherPlugin
 				panic(err)
 			}
 			sbomKey = sbomKeyUUID
+			detectedLanguage = "JS"
+			break
+		} else if step.Name == "php-sbom" {
+			sbomKeyUUID, err := uuid.Parse(step.Result["sbomKey"].(string))
+			if err != nil {
+				panic(err)
+			}
+			sbomKey = sbomKeyUUID
+			detectedLanguage = "PHP"
 			break
 		}
 	}
@@ -128,7 +138,7 @@ func startAnalysis(args Arguments, dispatcherMessage types_amqp.DispatcherPlugin
 		// return outputGenerator.FailureOutput(nil, start)
 		vulnOutput = outputGenerator.FailureOutput(sbom.AnalysisInfo, start)
 	} else {
-		vulnOutput = vulnerabilities.Start(project.Url, sbom, "JS", start, args.knowledge)
+		vulnOutput = vulnerabilities.Start(project.Url, sbom, detectedLanguage, start, args.knowledge)
 	}
 
 	vuln_result := codeclarity.Result{
