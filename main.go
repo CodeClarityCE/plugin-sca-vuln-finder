@@ -86,58 +86,40 @@ func startAnalysis(args Arguments, dispatcherMessage types_amqp.DispatcherPlugin
 	// Prepare the arguments for the plugin
 	// Get previous stage
 	analysis_stage := analysis_document.Stage - 1
-<<<<<<< Updated upstream
-	// Get sbomKey from previous stage - support both js-sbom and php-sbom
-	sbomKey := uuid.UUID{}
-	detectedLanguage := ""
-=======
 	// Get all SBOM keys from previous stage
 	sbomKeys := []struct {
-		id       uuid.UUID
-		language string
+		id         uuid.UUID
+		language   string
 		pluginName string
 	}{}
-	
->>>>>>> Stashed changes
+
 	for _, step := range analysis_document.Steps[analysis_stage] {
 		if step.Name == "js-sbom" {
 			sbomKeyUUID, err := uuid.Parse(step.Result["sbomKey"].(string))
 			if err != nil {
 				panic(err)
 			}
-<<<<<<< Updated upstream
-			sbomKey = sbomKeyUUID
-			detectedLanguage = "JS"
-			break
-=======
 			sbomKeys = append(sbomKeys, struct {
-				id       uuid.UUID
-				language string
+				id         uuid.UUID
+				language   string
 				pluginName string
 			}{sbomKeyUUID, "JS", "js-sbom"})
->>>>>>> Stashed changes
 		} else if step.Name == "php-sbom" {
 			sbomKeyUUID, err := uuid.Parse(step.Result["sbomKey"].(string))
 			if err != nil {
 				panic(err)
 			}
-<<<<<<< Updated upstream
-			sbomKey = sbomKeyUUID
-			detectedLanguage = "PHP"
-			break
-=======
 			sbomKeys = append(sbomKeys, struct {
-				id       uuid.UUID
-				language string
+				id         uuid.UUID
+				language   string
 				pluginName string
 			}{sbomKeyUUID, "PHP", "php-sbom"})
->>>>>>> Stashed changes
 		}
 	}
 
 	var vulnOutput vulnerabilityFinder.Output
 	start := time.Now()
-	
+
 	// Get project info (needed for both success and failure cases)
 	project := codeclarity.Project{
 		Id: *analysis_document.ProjectId,
@@ -146,21 +128,18 @@ func startAnalysis(args Arguments, dispatcherMessage types_amqp.DispatcherPlugin
 	if err != nil {
 		panic(err)
 	}
-	
+
 	// If no SBOMs were found, return success with empty results
 	if len(sbomKeys) == 0 {
 		vulnOutput = outputGenerator.SuccessOutput(map[string]vulnerabilityFinder.Workspace{}, sbom.AnalysisInfo{
 			Status: codeclarity.SUCCESS,
 		}, start)
 	} else {
-<<<<<<< Updated upstream
-		vulnOutput = vulnerabilities.Start(project.Url, sbom, detectedLanguage, start, args.knowledge)
-=======
 
 		// Process the first available SBOM (for now, we'll process just the first one)
 		// In the future, this could be enhanced to merge multiple SBOM results
 		sbomInfo := sbomKeys[0]
-		
+
 		res := codeclarity.Result{
 			Id: sbomInfo.id,
 		}
@@ -180,7 +159,6 @@ func startAnalysis(args Arguments, dispatcherMessage types_amqp.DispatcherPlugin
 		} else {
 			vulnOutput = vulnerabilities.Start(project.Url, sbom, sbomInfo.language, start, args.knowledge)
 		}
->>>>>>> Stashed changes
 	}
 
 	vuln_result := codeclarity.Result{
