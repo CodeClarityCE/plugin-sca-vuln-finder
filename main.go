@@ -93,7 +93,14 @@ func startAnalysis(args Arguments, dispatcherMessage types_amqp.DispatcherPlugin
 		pluginName string
 	}{}
 
+	log.Printf("Vuln-finder Debug - Analysis stage: %d", analysis_stage)
+	log.Printf("Vuln-finder Debug - Steps available: %d", len(analysis_document.Steps))
+	if analysis_stage < len(analysis_document.Steps) {
+		log.Printf("Vuln-finder Debug - Steps in current stage: %d", len(analysis_document.Steps[analysis_stage]))
+	}
+
 	for _, step := range analysis_document.Steps[analysis_stage] {
+		log.Printf("Vuln-finder Debug - Processing step: %s (Status: %s)", step.Name, step.Status)
 		if step.Name == "js-sbom" {
 			sbomKeyUUID, err := uuid.Parse(step.Result["sbomKey"].(string))
 			if err != nil {
@@ -104,6 +111,7 @@ func startAnalysis(args Arguments, dispatcherMessage types_amqp.DispatcherPlugin
 				language   string
 				pluginName string
 			}{sbomKeyUUID, "JS", "js-sbom"})
+			log.Printf("Vuln-finder Debug - Found JS SBOM with key: %s", sbomKeyUUID)
 		} else if step.Name == "php-sbom" {
 			sbomKeyUUID, err := uuid.Parse(step.Result["sbomKey"].(string))
 			if err != nil {
@@ -114,8 +122,11 @@ func startAnalysis(args Arguments, dispatcherMessage types_amqp.DispatcherPlugin
 				language   string
 				pluginName string
 			}{sbomKeyUUID, "PHP", "php-sbom"})
+			log.Printf("Vuln-finder Debug - Found PHP SBOM with key: %s", sbomKeyUUID)
 		}
 	}
+
+	log.Printf("Vuln-finder Debug - Total SBOMs found: %d", len(sbomKeys))
 
 	var vulnOutput vulnerabilityFinder.Output
 	start := time.Now()
@@ -149,8 +160,18 @@ func startAnalysis(args Arguments, dispatcherMessage types_amqp.DispatcherPlugin
 		}
 
 		sbom := sbom.Output{}
-		err = json.Unmarshal(res.Result.([]byte), &sbom)
+		
+		// Debug: Check what's in the result field
+		resultBytes := res.Result.([]byte)
+		preview := string(resultBytes)
+		if len(preview) > 200 {
+			preview = preview[:200] + "..."
+		}
+		log.Printf("Debug: Raw result from database for %s: %s", sbomInfo.pluginName, preview)
+		
+		err = json.Unmarshal(resultBytes, &sbom)
 		if err != nil {
+			log.Printf("Debug: JSON unmarshal error for %s: %s", sbomInfo.pluginName, err)
 			exceptionManager.AddError(
 				"", exceptionManager.GENERIC_ERROR,
 				fmt.Sprintf("Error when reading %s output: %s", sbomInfo.pluginName, err), exceptionManager.FAILED_TO_READ_PREVIOUS_STAGE_OUTPUT,

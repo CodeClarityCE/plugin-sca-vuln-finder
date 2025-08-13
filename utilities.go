@@ -39,6 +39,8 @@ import (
 //
 // If any error occurs during the execution of the callback function, it will be logged and the transaction will be aborted.
 func callback(args any, config plugin.Plugin, message []byte) {
+	log.Printf("Debug: Callback function called with message length: %d", len(message))
+	
 	// Get arguments
 	s, ok := args.(Arguments)
 	if !ok {
@@ -48,8 +50,17 @@ func callback(args any, config plugin.Plugin, message []byte) {
 
 	// Read message
 	var dispatcherMessage types_amqp.DispatcherPluginMessage
+	
+	// Debug: Check the raw message content
+	messagePreview := string(message)
+	if len(messagePreview) > 200 {
+		messagePreview = messagePreview[:200] + "..."
+	}
+	log.Printf("Debug: Received message from dispatcher: %s", messagePreview)
+	
 	err := json.Unmarshal([]byte(message), &dispatcherMessage)
 	if err != nil {
+		log.Printf("Debug: JSON unmarshal error in dispatcher message: %v", err)
 		log.Printf("%v", err)
 		return
 	}
