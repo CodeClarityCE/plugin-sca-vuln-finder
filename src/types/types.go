@@ -12,8 +12,9 @@ import (
 type VulnerabilitySource string
 
 const (
-	NVD VulnerabilitySource = "NVD"
-	OSV VulnerabilitySource = "OSV"
+	NVD          VulnerabilitySource = "NVD"
+	OSV          VulnerabilitySource = "OSV"
+	FriendsOfPHP VulnerabilitySource = "FriendsOfPHP"
 )
 
 type SeverityType string

@@ -7,7 +7,7 @@ import (
 	"sort"
 
 	packageRepository "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/repository"
-	nodesemver "github.com/CodeClarityCE/utility-node-semver"
+	semver "github.com/CodeClarityCE/utility-node-semver"
 	knowledge_db "github.com/CodeClarityCE/utility-types/knowledge_db"
 	"github.com/uptrace/bun"
 )
@@ -70,17 +70,17 @@ func GetVersionStringsBelow(depName string, depVersion string, limit int, knowle
 		return nil, err
 	}
 
-	constraint, err := nodesemver.ParseConstraint("< " + depVersion)
+	constraint, err := semver.ParseConstraintWithEcosystem("< " + depVersion, semver.Composer)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, version := range versions {
-		parsedVersion, err := nodesemver.ParseSemver(version)
+		parsedVersion, err := semver.ParseSemverWithEcosystem(version, semver.Composer)
 		if err != nil {
 			return nil, err
 		}
-		if nodesemver.Satisfies(parsedVersion, constraint, true) {
+		if semver.Satisfies(parsedVersion, constraint, true) {
 			toReturn = append(toReturn, version)
 		}
 	}
@@ -106,17 +106,17 @@ func GetVersionStringsAbove(depName string, depVersion string, limit int, knowle
 		return nil, err
 	}
 
-	constraint, err := nodesemver.ParseConstraint("> " + depVersion)
+	constraint, err := semver.ParseConstraintWithEcosystem("> " + depVersion, semver.Composer)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, version := range versions {
-		parsedVersion, err := nodesemver.ParseSemver(version)
+		parsedVersion, err := semver.ParseSemverWithEcosystem(version, semver.Composer)
 		if err != nil {
 			return nil, err
 		}
-		if nodesemver.Satisfies(parsedVersion, constraint, true) {
+		if semver.Satisfies(parsedVersion, constraint, true) {
 			toReturn = append(toReturn, version)
 		}
 	}
@@ -179,15 +179,15 @@ func (s semverCompVers) Swap(i, j int) {
 }
 
 // Less compares two semverCompVers values at index i and j and returns true if the value at index i is less than the value at index j.
-// It uses nodesemver.ParseSemver to parse the semver strings and compares the parsed versions using v1.LT(v2, false).
+// It uses semver.ParseSemverWithEcosystem to parse the semver strings and compares the parsed versions using v1.LT(v2, false).
 // If there is an error encountered during semver parsing, it logs the error and returns false.
 func (s semverCompVers) Less(i int, j int) bool {
-	v1, err := nodesemver.ParseSemver(s[i])
+	v1, err := semver.ParseSemverWithEcosystem(s[i], semver.Composer)
 	if err != nil {
 		log.Printf("Error encountered during semver parsing: %s.", err)
 		return false
 	}
-	v2, err := nodesemver.ParseSemver(s[j])
+	v2, err := semver.ParseSemverWithEcosystem(s[j], semver.Composer)
 	if err != nil {
 		log.Printf("Error encountered during semver parsing: %s.", err)
 		return false
