@@ -303,11 +303,11 @@ func TestCreatePHP(t *testing.T) {
 	// Check that we have the expected PHP dependencies
 	workspace := out.WorkSpaces["."]
 	assert.NotNil(t, workspace)
-	
+
 	// Since PHP knowledge database might not have packages, we should at least verify
 	// that the plugin runs without errors and returns proper structure
 	assert.IsType(t, []vulnerabilityFinder.Vulnerability{}, workspace.Vulnerabilities)
-	
+
 	// Verify the analysis structure
 	assert.NotEmpty(t, out.AnalysisInfo.AnalysisStartTime)
 	assert.NotEmpty(t, out.AnalysisInfo.AnalysisEndTime)

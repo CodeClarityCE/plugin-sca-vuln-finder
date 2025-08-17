@@ -10,6 +10,11 @@ import (
 func GetVulnsByDepName(depName string, knowledge *bun.DB) ([]knowledge_db.NVDItem, error) {
 	vulnerabilities := []knowledge_db.NVDItem{}
 
+	// Handle nil knowledge database gracefully
+	if knowledge == nil {
+		return vulnerabilities, nil
+	}
+
 	ctx := context.Background()
 
 	// TODO avoid SQL injection

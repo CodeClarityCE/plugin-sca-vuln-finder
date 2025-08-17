@@ -34,7 +34,7 @@ func TestLanguageDetection(t *testing.T) {
 		}
 
 		out := vulnerabilities.Start("", sbom, "JS", time.Now(), db_knowledge)
-		
+
 		assert.NotNil(t, out)
 		assert.Equal(t, codeclarity.SUCCESS, out.AnalysisInfo.Status)
 		assert.NotEmpty(t, out.WorkSpaces)
@@ -48,11 +48,11 @@ func TestLanguageDetection(t *testing.T) {
 		}
 
 		out := vulnerabilities.Start("", sbom, "PHP", time.Now(), db_knowledge)
-		
+
 		assert.NotNil(t, out)
 		assert.Equal(t, codeclarity.SUCCESS, out.AnalysisInfo.Status)
 		assert.NotEmpty(t, out.WorkSpaces)
-		
+
 		// Verify it handles PHP packages without crashing
 		workspace := out.WorkSpaces["."]
 		assert.NotNil(t, workspace)
@@ -68,7 +68,7 @@ func TestLanguageDetection(t *testing.T) {
 		}
 
 		out := vulnerabilities.Start("", sbom, "PYTHON", time.Now(), db_knowledge)
-		
+
 		assert.NotNil(t, out)
 		assert.Equal(t, codeclarity.FAILURE, out.AnalysisInfo.Status)
 		assert.NotEmpty(t, out.AnalysisInfo.Errors)

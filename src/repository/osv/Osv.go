@@ -15,6 +15,11 @@ import (
 func GetAllOSVReportsForPurl(purl string, knowledge *bun.DB) ([]knowledge_db.OSVItem, error) {
 	matches := []knowledge_db.OSVItem{}
 
+	// Handle nil knowledge database gracefully
+	if knowledge == nil {
+		return matches, nil
+	}
+
 	ctx := context.Background()
 
 	// Query standard OSV table
@@ -57,6 +62,12 @@ func GetAllOSVReportsForPurl(purl string, knowledge *bun.DB) ([]knowledge_db.OSV
 // getFriendsOfPHPReportsForPackage queries the friends_of_php table for a specific package
 func getFriendsOfPHPReportsForPackage(name, namespace string, knowledge *bun.DB) ([]knowledge_db.FriendsOfPHPAdvisory, error) {
 	var advisories []knowledge_db.FriendsOfPHPAdvisory
+
+	// Handle nil knowledge database gracefully
+	if knowledge == nil {
+		return advisories, nil
+	}
+
 	ctx := context.Background()
 
 	// Build the full package name
@@ -120,14 +131,14 @@ func convertFriendsOfPHPToOSV(advisory knowledge_db.FriendsOfPHPAdvisory) knowle
 	}
 
 	return knowledge_db.OSVItem{
-		OSVId:     "FRIENDSOFPHP-" + advisory.AdvisoryId,
-		Summary:   advisory.Title,
-		Details:   advisory.Description,
-		Aliases:   aliases,
-		Published: advisory.Published,
-		Modified:  advisory.Modified,
+		OSVId:      "FRIENDSOFPHP-" + advisory.AdvisoryId,
+		Summary:    advisory.Title,
+		Details:    advisory.Description,
+		Aliases:    aliases,
+		Published:  advisory.Published,
+		Modified:   advisory.Modified,
 		References: references,
-		Affected:  affected,
+		Affected:   affected,
 		DatabaseSpecific: map[string]interface{}{
 			"source":      "FriendsOfPHP",
 			"advisory_id": advisory.AdvisoryId,

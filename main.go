@@ -130,7 +130,6 @@ func startAnalysis(args Arguments, dispatcherMessage types_amqp.DispatcherPlugin
 		}
 	}
 
-
 	var vulnOutput vulnerabilityFinder.Output
 	start := time.Now()
 

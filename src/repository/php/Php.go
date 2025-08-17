@@ -70,7 +70,7 @@ func GetVersionStringsBelow(depName string, depVersion string, limit int, knowle
 		return nil, err
 	}
 
-	constraint, err := semver.ParseConstraintWithEcosystem("< " + depVersion, semver.Composer)
+	constraint, err := semver.ParseConstraintWithEcosystem("< "+depVersion, semver.Composer)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func GetVersionStringsAbove(depName string, depVersion string, limit int, knowle
 		return nil, err
 	}
 
-	constraint, err := semver.ParseConstraintWithEcosystem("> " + depVersion, semver.Composer)
+	constraint, err := semver.ParseConstraintWithEcosystem("> "+depVersion, semver.Composer)
 	if err != nil {
 		return nil, err
 	}

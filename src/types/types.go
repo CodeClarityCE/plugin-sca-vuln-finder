@@ -177,6 +177,20 @@ type Vulnerability struct {
 	Severity           VulnerabilityMatchSeverity
 	Weaknesses         []VulnerabilityMatchWeakness
 	Conflict           Conflict
+	// Extension-related fields for PHP extension vulnerabilities
+	PackageName      string   `json:"package_name,omitempty"`
+	CurrentVersion   string   `json:"current_version,omitempty"`
+	Constraint       string   `json:"constraint,omitempty"`
+	DirectDependency bool     `json:"direct_dependency,omitempty"`
+	Source           string   `json:"source,omitempty"`
+	CVSS             float64  `json:"cvss,omitempty"`
+	Summary          string   `json:"summary,omitempty"`
+	Details          string   `json:"details,omitempty"`
+	References       []string `json:"references,omitempty"`
+	PublishedDate    string   `json:"published_date,omitempty"`
+	ModifiedDate     string   `json:"modified_date,omitempty"`
+	WithdrawnDate    string   `json:"withdrawn_date,omitempty"`
+	ExtensionType    string   `json:"extension_type,omitempty"` // "php-extension" for PHP extensions
 }
 
 type Conflict struct {

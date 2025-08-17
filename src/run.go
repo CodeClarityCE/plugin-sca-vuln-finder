@@ -11,6 +11,7 @@ import (
 
 	"github.com/CodeClarityCE/plugin-sca-vuln-finder/src/conflictResolver"
 	ecosystemTypes "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/ecosystemAnalyzer/types"
+	extensionAnalyzer "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/extensionAnalyzer"
 	outputGenerator "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/outputGenerator"
 	npmRepository "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/repository/npm"
 	phpRepository "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/repository/php"
@@ -53,6 +54,24 @@ func Start(projectURL string, sbom sbomTypes.Output, languageId string, start ti
 	workspaces := map[string]vulnerabilityFinder.Workspace{}
 	for workspaceKey, workspace := range sbom.WorkSpaces {
 		vulns := vulnerabilityMatcher.GetWorkspaceVulnerabilities(workspace.Dependencies, knowledge)
+
+		// For PHP projects, also analyze PHP extension vulnerabilities
+		if languageId == "PHP" {
+			analyzer := extensionAnalyzer.NewPHPExtensionAnalyzer()
+
+			// Extract extensions from SBOM
+			extensions := analyzer.ExtractExtensionsFromSBOM(sbom)
+
+			// Filter to only relevant extensions for vulnerability tracking
+			relevantExtensions := analyzer.FilterRelevantExtensions(extensions)
+
+			// Analyze extension vulnerabilities
+			extensionVulns := analyzer.AnalyzeExtensionVulnerabilities(relevantExtensions, knowledge)
+
+			// Merge extension vulnerabilities with package vulnerabilities
+			vulns = append(vulns, extensionVulns...)
+		}
+
 		workspaces[workspaceKey] = vulnerabilityFinder.Workspace{
 			Vulnerabilities: vulns,
 		}
