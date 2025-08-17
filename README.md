@@ -53,9 +53,27 @@ The vulnerability finder service finds known vulnerabilities for the dependencie
 
 ## Current Features
 
-1. Identifies vulnerable package-managed dependencies
-2. Language agnostic. 
-   <br> This service has been designed in a language agnositc fashion. Adding support for a new language takes at most 10min.
+1. **Multi-language Support**: JavaScript (npm, yarn, pnpm) and PHP (Composer)
+2. **Vulnerability Sources**: OSV Database, NVD, FriendsOfPHP Security Advisories
+3. **PHP Extension Analysis**: Vulnerability detection for PHP extensions
+4. **Language-agnostic Architecture**: Easily extensible for new languages
+
+### Supported Languages
+
+| Language | Package Managers | Vulnerability Sources | Extension Support |
+|----------|------------------|----------------------|-------------------|
+| JavaScript | npm, yarn, pnpm | OSV, NVD | ❌ |
+| PHP | Composer | OSV (Packagist), FriendsOfPHP, NVD | ✅ |
+
+### PHP-Specific Features
+
+- **Composer Package Analysis**: Full support for `composer.lock` dependency analysis
+- **PHP Extension Vulnerabilities**: Detection of vulnerabilities in PHP extensions (openssl, curl, gd, etc.)
+- **Multi-source Vulnerability Data**: 
+  - OSV Packagist ecosystem
+  - FriendsOfPHP Security Advisories 
+  - NVD database for PHP components
+- **Framework Awareness**: Enhanced analysis for Laravel, Symfony, WordPress, etc.
 
 <br>
 
