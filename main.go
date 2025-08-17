@@ -84,24 +84,30 @@ func main() {
 
 func startAnalysis(args Arguments, dispatcherMessage types_amqp.DispatcherPluginMessage, config plugin.Plugin, analysis_document codeclarity.Analysis) (map[string]any, codeclarity.AnalysisStatus, error) {
 	// Prepare the arguments for the plugin
-	// Get previous stage
-	analysis_stage := analysis_document.Stage - 1
-	// Get all SBOM keys from previous stage
+	// Get all SBOM keys from previous stages
 	sbomKeys := []struct {
 		id         uuid.UUID
 		language   string
 		pluginName string
 	}{}
 
-	log.Printf("Vuln-finder Debug - Analysis stage: %d", analysis_stage)
-	log.Printf("Vuln-finder Debug - Steps available: %d", len(analysis_document.Steps))
-	if analysis_stage < len(analysis_document.Steps) {
-		log.Printf("Vuln-finder Debug - Steps in current stage: %d", len(analysis_document.Steps[analysis_stage]))
+	// Vuln-finder depends on SBOM plugins, so it should never be at stage 0
+	// If we're at stage 0, it means the dispatcher hasn't properly updated the stage yet
+	if analysis_document.Stage == 0 {
+		return nil, codeclarity.FAILURE, fmt.Errorf("vuln-finder cannot run at stage 0 - depends on SBOM plugins")
+	}
+
+	// Get previous stage where SBOM plugins ran
+	analysis_stage := analysis_document.Stage - 1
+
+	// Safety check: ensure we have a valid previous stage
+	if analysis_stage >= len(analysis_document.Steps) {
+		return nil, codeclarity.FAILURE, fmt.Errorf("invalid analysis stage %d - exceeds available stages (total: %d)", analysis_stage, len(analysis_document.Steps))
 	}
 
 	for _, step := range analysis_document.Steps[analysis_stage] {
-		log.Printf("Vuln-finder Debug - Processing step: %s (Status: %s)", step.Name, step.Status)
-		if step.Name == "js-sbom" {
+		switch step.Name {
+		case "js-sbom":
 			sbomKeyUUID, err := uuid.Parse(step.Result["sbomKey"].(string))
 			if err != nil {
 				panic(err)
@@ -111,8 +117,7 @@ func startAnalysis(args Arguments, dispatcherMessage types_amqp.DispatcherPlugin
 				language   string
 				pluginName string
 			}{sbomKeyUUID, "JS", "js-sbom"})
-			log.Printf("Vuln-finder Debug - Found JS SBOM with key: %s", sbomKeyUUID)
-		} else if step.Name == "php-sbom" {
+		case "php-sbom":
 			sbomKeyUUID, err := uuid.Parse(step.Result["sbomKey"].(string))
 			if err != nil {
 				panic(err)
@@ -122,11 +127,9 @@ func startAnalysis(args Arguments, dispatcherMessage types_amqp.DispatcherPlugin
 				language   string
 				pluginName string
 			}{sbomKeyUUID, "PHP", "php-sbom"})
-			log.Printf("Vuln-finder Debug - Found PHP SBOM with key: %s", sbomKeyUUID)
 		}
 	}
 
-	log.Printf("Vuln-finder Debug - Total SBOMs found: %d", len(sbomKeys))
 
 	var vulnOutput vulnerabilityFinder.Output
 	start := time.Now()
@@ -160,18 +163,10 @@ func startAnalysis(args Arguments, dispatcherMessage types_amqp.DispatcherPlugin
 		}
 
 		sbom := sbom.Output{}
-		
-		// Debug: Check what's in the result field
+
 		resultBytes := res.Result.([]byte)
-		preview := string(resultBytes)
-		if len(preview) > 200 {
-			preview = preview[:200] + "..."
-		}
-		log.Printf("Debug: Raw result from database for %s: %s", sbomInfo.pluginName, preview)
-		
 		err = json.Unmarshal(resultBytes, &sbom)
 		if err != nil {
-			log.Printf("Debug: JSON unmarshal error for %s: %s", sbomInfo.pluginName, err)
 			exceptionManager.AddError(
 				"", exceptionManager.GENERIC_ERROR,
 				fmt.Sprintf("Error when reading %s output: %s", sbomInfo.pluginName, err), exceptionManager.FAILED_TO_READ_PREVIOUS_STAGE_OUTPUT,
