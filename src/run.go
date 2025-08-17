@@ -14,6 +14,7 @@ import (
 	extensionAnalyzer "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/extensionAnalyzer"
 	frameworkAnalyzer "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/frameworkAnalyzer"
 	outputGenerator "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/outputGenerator"
+	privatePackageAnalyzer "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/privatePackageAnalyzer"
 	npmRepository "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/repository/npm"
 	phpRepository "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/repository/php"
 	vulnerabilityFinder "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/types"
@@ -84,6 +85,13 @@ func Start(projectURL string, sbom sbomTypes.Output, languageId string, start ti
 			// Merge framework vulnerabilities with existing vulnerabilities
 			vulns = append(vulns, frameworkVulns...)
 		}
+
+		// Analyze private packages for vulnerabilities (for both JS and PHP)
+		privateAnalyzer := privatePackageAnalyzer.NewPrivatePackageAnalyzer(knowledge)
+		privateVulns := privateAnalyzer.AnalyzePrivatePackages(sbom, workspace.Dependencies)
+		
+		// Merge private package vulnerabilities with existing vulnerabilities
+		vulns = append(vulns, privateVulns...)
 
 		workspaces[workspaceKey] = vulnerabilityFinder.Workspace{
 			Vulnerabilities: vulns,
