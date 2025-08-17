@@ -27,6 +27,9 @@ var PhpPackageRepository = packageRepository.PackageRepository{
 // It returns the version strings in ascending order and an error if any.
 func GetVersionStrings(depName string, knowledge *bun.DB) ([]string, error) {
 	versions := []string{}
+	if knowledge == nil {
+		return versions, fmt.Errorf("database connection is nil")
+	}
 	dependency := knowledge_db.Package{}
 	ctx := context.Background()
 	exists, err := knowledge.NewSelect().Model(&dependency).Relation("Versions").Where("name = ?", depName).Exists(ctx)
@@ -58,6 +61,9 @@ func GetVersionStrings(depName string, knowledge *bun.DB) ([]string, error) {
 // It returns the version strings in ascending order and an error if any.
 func GetVersionStringsBelow(depName string, depVersion string, limit int, knowledge *bun.DB) ([]string, error) {
 	toReturn := []string{}
+	if knowledge == nil {
+		return toReturn, fmt.Errorf("database connection is nil")
+	}
 
 	versions, err := GetVersionStrings(depName, knowledge)
 	if err != nil {
@@ -91,6 +97,9 @@ func GetVersionStringsBelow(depName string, depVersion string, limit int, knowle
 // It returns the version strings in ascending order and an error if any.
 func GetVersionStringsAbove(depName string, depVersion string, limit int, knowledge *bun.DB) ([]string, error) {
 	toReturn := []string{}
+	if knowledge == nil {
+		return toReturn, fmt.Errorf("database connection is nil")
+	}
 
 	versions, err := GetVersionStrings(depName, knowledge)
 	if err != nil {
@@ -123,6 +132,9 @@ func GetVersionStringsAbove(depName string, depVersion string, limit int, knowle
 // GetFirstVersionString retrieves the first (lowest) version string of a given dependency.
 // It returns the version string and an error if any.
 func GetFirstVersionString(depName string, knowledge *bun.DB) (string, error) {
+	if knowledge == nil {
+		return "", fmt.Errorf("database connection is nil")
+	}
 	versions, err := GetVersionStrings(depName, knowledge)
 	if err != nil {
 		return "", err
@@ -138,6 +150,9 @@ func GetFirstVersionString(depName string, knowledge *bun.DB) (string, error) {
 // GetLastVersionString retrieves the last (highest) version string of a given dependency.
 // It returns the version string and an error if any.
 func GetLastVersionString(depName string, knowledge *bun.DB) (string, error) {
+	if knowledge == nil {
+		return "", fmt.Errorf("database connection is nil")
+	}
 	versions, err := GetVersionStrings(depName, knowledge)
 	if err != nil {
 		return "", err

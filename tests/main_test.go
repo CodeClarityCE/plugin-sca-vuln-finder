@@ -280,12 +280,20 @@ func TestCreatePHP(t *testing.T) {
 	db_knowledge := bun.NewDB(sqldb_knowledge, pgdialect.New())
 	defer db_knowledge.Close()
 
-	sbom, err := getSBOM("php")
+	sbom, err := getSBOM("../../php-sbom/tests/test1")
 	if err != nil {
 		t.Errorf("Error getting mock PHP SBOM: %v", err)
 	}
 
 	out := vulnerabilities.Start("", sbom, "PHP", time.Now(), db_knowledge)
+
+	// Debug output for failing tests
+	if out.AnalysisInfo.Status != codeclarity.SUCCESS {
+		t.Logf("Analysis failed with status: %s", out.AnalysisInfo.Status)
+		if len(out.AnalysisInfo.Errors) > 0 {
+			t.Logf("Errors: %+v", out.AnalysisInfo.Errors)
+		}
+	}
 
 	// Assert the expected values
 	assert.NotNil(t, out)
@@ -304,7 +312,7 @@ func TestCreatePHP(t *testing.T) {
 	assert.NotEmpty(t, out.AnalysisInfo.AnalysisStartTime)
 	assert.NotEmpty(t, out.AnalysisInfo.AnalysisEndTime)
 
-	WriteJSON(out, "php/vulns.json")
+	WriteJSON(out, "../../php-sbom/tests/test1/vulns.json")
 }
 
 func TestPHPRepositoryFunctions(t *testing.T) {
