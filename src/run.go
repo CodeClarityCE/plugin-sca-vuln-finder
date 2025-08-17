@@ -12,6 +12,7 @@ import (
 	"github.com/CodeClarityCE/plugin-sca-vuln-finder/src/conflictResolver"
 	ecosystemTypes "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/ecosystemAnalyzer/types"
 	extensionAnalyzer "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/extensionAnalyzer"
+	frameworkAnalyzer "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/frameworkAnalyzer"
 	outputGenerator "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/outputGenerator"
 	npmRepository "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/repository/npm"
 	phpRepository "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/repository/php"
@@ -70,6 +71,18 @@ func Start(projectURL string, sbom sbomTypes.Output, languageId string, start ti
 
 			// Merge extension vulnerabilities with package vulnerabilities
 			vulns = append(vulns, extensionVulns...)
+
+			// Also analyze PHP framework-specific vulnerabilities
+			frameworkAnalyzer := frameworkAnalyzer.NewPHPFrameworkAnalyzer()
+
+			// Extract framework information from SBOM
+			frameworks := frameworkAnalyzer.ExtractFrameworkFromSBOM(sbom)
+
+			// Analyze framework-specific vulnerabilities and security rules
+			frameworkVulns := frameworkAnalyzer.AnalyzeFrameworkVulnerabilities(frameworks, knowledge)
+
+			// Merge framework vulnerabilities with existing vulnerabilities
+			vulns = append(vulns, frameworkVulns...)
 		}
 
 		workspaces[workspaceKey] = vulnerabilityFinder.Workspace{
