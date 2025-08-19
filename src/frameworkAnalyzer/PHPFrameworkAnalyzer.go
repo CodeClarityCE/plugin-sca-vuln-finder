@@ -14,12 +14,15 @@ import (
 // PHPFrameworkAnalyzer analyzes PHP frameworks for vulnerabilities and security best practices
 type PHPFrameworkAnalyzer struct {
 	matcher frameworkMatcher.PHPFrameworkVulnerabilityMatcher
+	// Cache to avoid duplicate queries for the same framework
+	vulnerabilityCache map[string][]frameworkMatcher.FrameworkVulnerabilityMatch
 }
 
 // NewPHPFrameworkAnalyzer creates a new PHP framework analyzer
 func NewPHPFrameworkAnalyzer() *PHPFrameworkAnalyzer {
 	return &PHPFrameworkAnalyzer{
-		matcher: frameworkMatcher.PHPFrameworkVulnerabilityMatcher{},
+		matcher:            frameworkMatcher.PHPFrameworkVulnerabilityMatcher{},
+		vulnerabilityCache: make(map[string][]frameworkMatcher.FrameworkVulnerabilityMatch),
 	}
 }
 
@@ -48,7 +51,9 @@ func (analyzer *PHPFrameworkAnalyzer) ExtractFrameworkFromSBOM(sbom sbomTypes.Ou
 	}
 
 	// Remove duplicates
-	return analyzer.deduplicateFrameworks(frameworks)
+	deduplicated := analyzer.deduplicateFrameworks(frameworks)
+	log.Printf("Found %d total frameworks, %d after deduplication", len(frameworks), len(deduplicated))
+	return deduplicated
 }
 
 // detectFrameworkFromDependency detects framework from dependency name and version
@@ -171,11 +176,21 @@ func (analyzer *PHPFrameworkAnalyzer) AnalyzeFrameworkVulnerabilities(
 	for _, framework := range frameworks {
 		log.Printf("Analyzing vulnerabilities for PHP framework: %s %s", framework.Name, framework.Version)
 
-		// Match vulnerabilities for this framework
-		matches, err := analyzer.matcher.MatchFrameworkVulnerabilities(framework.Name, framework.Version, knowledge)
-		if err != nil {
-			log.Printf("Error analyzing vulnerabilities for framework %s: %v", framework.Name, err)
-			continue
+		// Check cache first - cache by framework name (not version) since vulnerabilities are often shared
+		cacheKey := framework.Name
+		matches, exists := analyzer.vulnerabilityCache[cacheKey]
+		if !exists {
+			// Match vulnerabilities for this framework
+			var err error
+			matches, err = analyzer.matcher.MatchFrameworkVulnerabilities(framework.Name, framework.Version, knowledge)
+			if err != nil {
+				log.Printf("Error analyzing vulnerabilities for framework %s: %v", framework.Name, err)
+				continue
+			}
+			// Cache the results
+			analyzer.vulnerabilityCache[cacheKey] = matches
+		} else {
+			log.Printf("Using cached vulnerabilities for framework %s", framework.Name)
 		}
 
 		// Convert matches to vulnerability objects
@@ -197,6 +212,8 @@ func (analyzer *PHPFrameworkAnalyzer) AnalyzeFrameworkVulnerabilities(
 				ExtensionType:      "php-framework",                             // Mark as PHP framework vulnerability
 				AffectedDependency: fmt.Sprintf("framework-%s", framework.Name), // Use existing field
 				AffectedVersion:    framework.Version,                           // Use existing field
+				// Set proper severity based on CVSS score
+				Severity: analyzer.convertCVSSToSeverity(match.CVSS),
 			}
 
 			// Add framework-specific severity adjustments
@@ -375,6 +392,30 @@ func (analyzer *PHPFrameworkAnalyzer) getCakePHPSecurityRules(framework Framewor
 	}
 
 	return rules
+}
+
+// convertCVSSToSeverity converts CVSS score to VulnerabilityMatchSeverity struct
+func (analyzer *PHPFrameworkAnalyzer) convertCVSSToSeverity(cvss float64) vulnerabilityFinder.VulnerabilityMatchSeverity {
+	var severityClass vulnerabilityFinder.CVSS_CLASSV3
+	
+	// Convert CVSS score to severity class according to CVSS v3.1 standard
+	if cvss >= 9.0 {
+		severityClass = vulnerabilityFinder.CRITICAL
+	} else if cvss >= 7.0 {
+		severityClass = vulnerabilityFinder.HIGH
+	} else if cvss >= 4.0 {
+		severityClass = vulnerabilityFinder.MEDIUM
+	} else if cvss > 0.0 {
+		severityClass = vulnerabilityFinder.LOW
+	} else {
+		severityClass = vulnerabilityFinder.NONE
+	}
+
+	return vulnerabilityFinder.VulnerabilityMatchSeverity{
+		SeverityClass: severityClass,
+		Severity:      cvss,
+		SeverityType:  vulnerabilityFinder.CVSS_V3, // Assume CVSS v3
+	}
 }
 
 // isVersionAffected checks if a version matches a constraint (simplified version comparison)

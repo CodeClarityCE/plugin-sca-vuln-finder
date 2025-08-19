@@ -73,13 +73,13 @@ func Start(projectURL string, sbom sbomTypes.Output, languageId string, start ti
 			// Merge extension vulnerabilities with package vulnerabilities
 			vulns = append(vulns, extensionVulns...)
 
-			// Also analyze PHP framework-specific vulnerabilities
+			// Also analyze PHP framework-specific vulnerabilities with real database queries
 			frameworkAnalyzer := frameworkAnalyzer.NewPHPFrameworkAnalyzer()
 
 			// Extract framework information from SBOM
 			frameworks := frameworkAnalyzer.ExtractFrameworkFromSBOM(sbom)
 
-			// Analyze framework-specific vulnerabilities and security rules
+			// Analyze framework-specific vulnerabilities using real OSV/NVD/FriendsOfPHP queries
 			frameworkVulns := frameworkAnalyzer.AnalyzeFrameworkVulnerabilities(frameworks, knowledge)
 
 			// Merge framework vulnerabilities with existing vulnerabilities

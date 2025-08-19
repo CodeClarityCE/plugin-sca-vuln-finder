@@ -91,42 +91,43 @@ func startAnalysis(args Arguments, dispatcherMessage types_amqp.DispatcherPlugin
 		pluginName string
 	}{}
 
-	// Vuln-finder depends on SBOM plugins, so it should never be at stage 0
-	// If we're at stage 0, it means the dispatcher hasn't properly updated the stage yet
-	if analysis_document.Stage == 0 {
-		return nil, codeclarity.FAILURE, fmt.Errorf("vuln-finder cannot run at stage 0 - depends on SBOM plugins")
-	}
-
-	// Get previous stage where SBOM plugins ran
-	analysis_stage := analysis_document.Stage - 1
-
-	// Safety check: ensure we have a valid previous stage
-	if analysis_stage >= len(analysis_document.Steps) {
-		return nil, codeclarity.FAILURE, fmt.Errorf("invalid analysis stage %d - exceeds available stages (total: %d)", analysis_stage, len(analysis_document.Steps))
-	}
-
-	for _, step := range analysis_document.Steps[analysis_stage] {
-		switch step.Name {
-		case "js-sbom":
-			sbomKeyUUID, err := uuid.Parse(step.Result["sbomKey"].(string))
-			if err != nil {
-				panic(err)
+	// Look for SBOM results in all completed stages, not just the "previous" stage
+	// This makes vuln-finder more flexible with dispatcher scheduling
+	log.Printf("Scanning all stages for SBOM results. Current stage: %d, Total stages: %d", analysis_document.Stage, len(analysis_document.Steps))
+	
+	// Search through all stages to find completed SBOM plugins
+	for stageIndex := 0; stageIndex < len(analysis_document.Steps); stageIndex++ {
+		log.Printf("Checking stage %d for SBOM results", stageIndex)
+		for _, step := range analysis_document.Steps[stageIndex] {
+			// Only process completed steps that have results
+			if step.Status != codeclarity.SUCCESS || step.Result == nil {
+				continue
 			}
-			sbomKeys = append(sbomKeys, struct {
-				id         uuid.UUID
-				language   string
-				pluginName string
-			}{sbomKeyUUID, "JS", "js-sbom"})
-		case "php-sbom":
-			sbomKeyUUID, err := uuid.Parse(step.Result["sbomKey"].(string))
-			if err != nil {
-				panic(err)
+			
+			switch step.Name {
+			case "js-sbom":
+				log.Printf("Found completed js-sbom in stage %d", stageIndex)
+				sbomKeyUUID, err := uuid.Parse(step.Result["sbomKey"].(string))
+				if err != nil {
+					panic(err)
+				}
+				sbomKeys = append(sbomKeys, struct {
+					id         uuid.UUID
+					language   string
+					pluginName string
+				}{sbomKeyUUID, "JS", "js-sbom"})
+			case "php-sbom":
+				log.Printf("Found completed php-sbom in stage %d", stageIndex)
+				sbomKeyUUID, err := uuid.Parse(step.Result["sbomKey"].(string))
+				if err != nil {
+					panic(err)
+				}
+				sbomKeys = append(sbomKeys, struct {
+					id         uuid.UUID
+					language   string
+					pluginName string
+				}{sbomKeyUUID, "PHP", "php-sbom"})
 			}
-			sbomKeys = append(sbomKeys, struct {
-				id         uuid.UUID
-				language   string
-				pluginName string
-			}{sbomKeyUUID, "PHP", "php-sbom"})
 		}
 	}
 
@@ -142,8 +143,11 @@ func startAnalysis(args Arguments, dispatcherMessage types_amqp.DispatcherPlugin
 		panic(err)
 	}
 
+	log.Printf("SBOM search complete. Found %d SBOM results", len(sbomKeys))
+	
 	// If no SBOMs were found, return success with empty results
 	if len(sbomKeys) == 0 {
+		log.Printf("No SBOM results found - this might indicate SBOM plugins haven't completed yet or failed")
 		vulnOutput = outputGenerator.SuccessOutput(map[string]vulnerabilityFinder.Workspace{}, sbom.AnalysisInfo{
 			Status: codeclarity.SUCCESS,
 		}, start)
