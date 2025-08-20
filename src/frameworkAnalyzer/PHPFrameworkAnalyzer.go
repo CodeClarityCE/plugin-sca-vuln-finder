@@ -8,6 +8,8 @@ import (
 	sbomTypes "github.com/CodeClarityCE/plugin-sbom-javascript/src/types/sbom/js"
 	vulnerabilityFinder "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/types"
 	frameworkMatcher "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/vulnerabilityMatcher/frameworks"
+	knowledge_db "github.com/CodeClarityCE/utility-types/knowledge_db"
+	semver "github.com/CodeClarityCE/utility-node-semver"
 	"github.com/uptrace/bun"
 )
 
@@ -214,6 +216,32 @@ func (analyzer *PHPFrameworkAnalyzer) AnalyzeFrameworkVulnerabilities(
 				AffectedVersion:    framework.Version,                           // Use existing field
 				// Set proper severity based on CVSS score
 				Severity: analyzer.convertCVSSToSeverity(match.CVSS),
+			}
+
+			// Create OSVMatch with AffectedInfo so the report generator can display affected versions
+			if match.Source == "OSV Database" || match.Source == "FriendsOfPHP" {
+				vuln.OSVMatch = &vulnerabilityFinder.OSVVulnerability{
+					Vulnerability: knowledge_db.OSVItem{
+						OSVId:     match.VulnerabilityID,
+						Summary:   match.Summary,
+						Details:   match.Details,
+						Published: match.PublishedDate,
+						Modified:  match.ModifiedDate,
+					},
+					AffectedInfo: analyzer.createAffectedInfoForFramework(framework.Version),
+				}
+			}
+
+			// Create NVDMatch with AffectedInfo for NVD sources
+			if match.Source == "NVD Database" {
+				vuln.NVDMatch = &vulnerabilityFinder.NVDVulnerability{
+					Vulnerability: knowledge_db.NVDItem{
+						NVDId:        match.VulnerabilityID,
+						Published:    match.PublishedDate,
+						LastModified: match.ModifiedDate,
+					},
+					AffectedInfo: analyzer.createAffectedInfoForFramework(framework.Version),
+				}
 			}
 
 			// Add framework-specific severity adjustments
@@ -433,4 +461,49 @@ func (analyzer *PHPFrameworkAnalyzer) isVersionAffected(version, constraint stri
 	}
 
 	return false
+}
+
+// createAffectedInfoForFramework creates AffectedInfo structure for framework vulnerabilities
+// This allows the report generator to display affected version information
+func (analyzer *PHPFrameworkAnalyzer) createAffectedInfoForFramework(frameworkVersion string) []vulnerabilityFinder.AffectedVersion {
+	affectedVersions := []vulnerabilityFinder.AffectedVersion{}
+	
+	// For framework vulnerabilities, we create a simple AffectedInfo that indicates
+	// the current version is affected. This allows the report generator to display
+	// version information properly.
+	
+	// Parse the framework version using Composer semver rules
+	frameworkSemver, err := semver.ParseSemverWithEcosystem(frameworkVersion, semver.Composer)
+	if err != nil {
+		log.Printf("Failed to parse framework version %s: %v", frameworkVersion, err)
+		// Create a universal affected info if we can't parse the version
+		affectedVersions = append(affectedVersions, vulnerabilityFinder.AffectedVersion{
+			Universal: vulnerabilityFinder.AffectedUniversal{
+				CPEInfo: knowledge_db.Sources{
+					CriteriaDict: knowledge_db.CriteriaDict{
+						Version: frameworkVersion,
+					},
+				},
+			},
+		})
+		return affectedVersions
+	}
+	
+	// Create an exact match for the current framework version
+	affectedVersions = append(affectedVersions, vulnerabilityFinder.AffectedVersion{
+		Exact: []vulnerabilityFinder.AffectedExact{
+			{
+				VersionString: frameworkVersion,
+				VersionSemver: frameworkSemver,
+				CPEInfo: knowledge_db.Sources{
+					CriteriaDict: knowledge_db.CriteriaDict{
+						Version: frameworkVersion,
+						Product: "framework",
+					},
+				},
+			},
+		},
+	})
+	
+	return affectedVersions
 }
