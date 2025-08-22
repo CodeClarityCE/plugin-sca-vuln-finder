@@ -13,7 +13,7 @@ import (
 	vulnerabilities "github.com/CodeClarityCE/plugin-sca-vuln-finder/src"
 	"github.com/CodeClarityCE/plugin-sca-vuln-finder/src/outputGenerator"
 	vulnerabilityFinder "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/types"
-	"github.com/CodeClarityCE/utility-types/ecosystem"
+	"github.com/CodeClarityCE/utility-types/boilerplates"
 	types_amqp "github.com/CodeClarityCE/utility-types/amqp"
 	codeclarity "github.com/CodeClarityCE/utility-types/codeclarity_db"
 	exceptionManager "github.com/CodeClarityCE/utility-types/exceptions"
@@ -26,7 +26,7 @@ type VulnFinderAnalysisHandler struct{}
 
 // StartAnalysis implements the AnalysisHandler interface
 func (h *VulnFinderAnalysisHandler) StartAnalysis(
-	databases *ecosystem.PluginDatabases,
+	databases *boilerplates.PluginDatabases,
 	dispatcherMessage types_amqp.DispatcherPluginMessage,
 	config plugin.Plugin,
 	analysisDoc codeclarity.Analysis,
@@ -36,7 +36,7 @@ func (h *VulnFinderAnalysisHandler) StartAnalysis(
 
 // main is the entry point of the program.
 func main() {
-	pluginBase, err := ecosystem.NewPluginBase()
+	pluginBase, err := boilerplates.CreatePluginBase()
 	if err != nil {
 		log.Fatalf("Failed to initialize plugin base: %v", err)
 	}
@@ -50,7 +50,7 @@ func main() {
 	}
 }
 
-func startAnalysis(databases *ecosystem.PluginDatabases, dispatcherMessage types_amqp.DispatcherPluginMessage, config plugin.Plugin, analysis_document codeclarity.Analysis) (map[string]any, codeclarity.AnalysisStatus, error) {
+func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage types_amqp.DispatcherPluginMessage, config plugin.Plugin, analysis_document codeclarity.Analysis) (map[string]any, codeclarity.AnalysisStatus, error) {
 	// Prepare the arguments for the plugin
 	// Get all SBOM keys from previous stages
 	sbomKeys := []struct {

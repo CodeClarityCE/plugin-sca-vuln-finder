@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"os"
 	"testing"
 	"time"
@@ -9,33 +8,47 @@ import (
 	vulnerabilities "github.com/CodeClarityCE/plugin-sca-vuln-finder/src"
 	phpRepository "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/repository/php"
 	vulnerabilityFinder "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/types"
-	dbhelper "github.com/CodeClarityCE/utility-dbhelper/helper"
 	codeclarity "github.com/CodeClarityCE/utility-types/codeclarity_db"
+	"github.com/CodeClarityCE/utility-types/boilerplates"
 	"github.com/stretchr/testify/assert"
-	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/dialect/pgdialect"
-	"github.com/uptrace/bun/driver/pgdriver"
 )
 
-func TestCreateNPMv1(t *testing.T) {
-	os.Setenv("NPM_URL", "https://replicate.npmjs.com/")
-
+// setupTestEnvironment sets up the necessary environment for testing
+func setupTestEnvironment(t *testing.T) (*boilerplates.PluginBase, func()) {
+	// Set test database environment
 	os.Setenv("PG_DB_HOST", "127.0.0.1")
 	os.Setenv("PG_DB_PORT", "5432")
 	os.Setenv("PG_DB_USER", "postgres")
 	os.Setenv("PG_DB_PASSWORD", "!ChangeMe!")
+	os.Setenv("NPM_URL", "https://replicate.npmjs.com/")
 
-	dsn_knowledge := "postgres://postgres:!ChangeMe!@127.0.0.1:5432/" + dbhelper.Config.Database.Knowledge + "?sslmode=disable"
-	sqldb_knowledge := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn_knowledge), pgdriver.WithTimeout(50*time.Second)))
-	db_knowledge := bun.NewDB(sqldb_knowledge, pgdialect.New())
-	defer db_knowledge.Close()
+	// Create PluginBase for testing
+	pluginBase, err := boilerplates.CreatePluginBase()
+	if err != nil {
+		t.Skipf("Skipping test due to database connection error: %v", err)
+		return nil, func() {}
+	}
+
+	cleanup := func() {
+		pluginBase.Close()
+	}
+
+	return pluginBase, cleanup
+}
+
+func TestCreateNPMv1(t *testing.T) {
+	pluginBase, cleanup := setupTestEnvironment(t)
+	if pluginBase == nil {
+		return // Test was skipped
+	}
+	defer cleanup()
 
 	sbom, err := getSBOM("../../js-sbom/tests/npmv1")
 	if err != nil {
 		t.Errorf("Error getting mock SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start("", sbom, "JS", time.Now(), db_knowledge)
+	out := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge)
 
 	// Assert the expected values
 	assert.NotNil(t, out)
@@ -46,24 +59,18 @@ func TestCreateNPMv1(t *testing.T) {
 }
 
 func TestCreateNPMv2(t *testing.T) {
-	os.Setenv("NPM_URL", "https://replicate.npmjs.com/")
-
-	os.Setenv("PG_DB_HOST", "127.0.0.1")
-	os.Setenv("PG_DB_PORT", "6432")
-	os.Setenv("PG_DB_USER", "postgres")
-	os.Setenv("PG_DB_PASSWORD", "!ChangeMe!")
-
-	dsn_knowledge := "postgres://postgres:!ChangeMe!@127.0.0.1:6432/" + dbhelper.Config.Database.Knowledge + "?sslmode=disable"
-	sqldb_knowledge := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn_knowledge), pgdriver.WithTimeout(50*time.Second)))
-	db_knowledge := bun.NewDB(sqldb_knowledge, pgdialect.New())
-	defer db_knowledge.Close()
+	pluginBase, cleanup := setupTestEnvironment(t)
+	if pluginBase == nil {
+		return // Test was skipped
+	}
+	defer cleanup()
 
 	sbom, err := getSBOM("../../js-sbom/tests/npmv2")
 	if err != nil {
 		t.Errorf("Error getting mock SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start("", sbom, "JS", time.Now(), db_knowledge)
+	out := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge)
 
 	// Assert the expected values
 	assert.NotNil(t, out)
@@ -74,24 +81,18 @@ func TestCreateNPMv2(t *testing.T) {
 }
 
 func TestCreateYarnv1(t *testing.T) {
-	os.Setenv("NPM_URL", "https://replicate.npmjs.com/")
-
-	os.Setenv("PG_DB_HOST", "127.0.0.1")
-	os.Setenv("PG_DB_PORT", "5432")
-	os.Setenv("PG_DB_USER", "postgres")
-	os.Setenv("PG_DB_PASSWORD", "!ChangeMe!")
-
-	dsn_knowledge := "postgres://postgres:!ChangeMe!@127.0.0.1:5432/" + dbhelper.Config.Database.Knowledge + "?sslmode=disable"
-	sqldb_knowledge := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn_knowledge), pgdriver.WithTimeout(50*time.Second)))
-	db_knowledge := bun.NewDB(sqldb_knowledge, pgdialect.New())
-	defer db_knowledge.Close()
+	pluginBase, cleanup := setupTestEnvironment(t)
+	if pluginBase == nil {
+		return // Test was skipped
+	}
+	defer cleanup()
 
 	sbom, err := getSBOM("../../js-sbom/tests/yarnv1")
 	if err != nil {
 		t.Errorf("Error getting mock SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start("", sbom, "JS", time.Now(), db_knowledge)
+	out := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge)
 
 	// Assert the expected values
 	assert.NotNil(t, out)
@@ -102,24 +103,18 @@ func TestCreateYarnv1(t *testing.T) {
 }
 
 func TestCreateYarnv2(t *testing.T) {
-	os.Setenv("NPM_URL", "https://replicate.npmjs.com/")
-
-	os.Setenv("PG_DB_HOST", "127.0.0.1")
-	os.Setenv("PG_DB_PORT", "5432")
-	os.Setenv("PG_DB_USER", "postgres")
-	os.Setenv("PG_DB_PASSWORD", "!ChangeMe!")
-
-	dsn_knowledge := "postgres://postgres:!ChangeMe!@127.0.0.1:5432/" + dbhelper.Config.Database.Knowledge + "?sslmode=disable"
-	sqldb_knowledge := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn_knowledge), pgdriver.WithTimeout(50*time.Second)))
-	db_knowledge := bun.NewDB(sqldb_knowledge, pgdialect.New())
-	defer db_knowledge.Close()
+	pluginBase, cleanup := setupTestEnvironment(t)
+	if pluginBase == nil {
+		return // Test was skipped
+	}
+	defer cleanup()
 
 	sbom, err := getSBOM("../../js-sbom/tests/yarnv2")
 	if err != nil {
 		t.Errorf("Error getting mock SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start("", sbom, "JS", time.Now(), db_knowledge)
+	out := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge)
 
 	// Assert the expected values
 	assert.NotNil(t, out)
@@ -130,24 +125,18 @@ func TestCreateYarnv2(t *testing.T) {
 }
 
 func TestCreateYarnv3(t *testing.T) {
-	os.Setenv("NPM_URL", "https://replicate.npmjs.com/")
-
-	os.Setenv("PG_DB_HOST", "127.0.0.1")
-	os.Setenv("PG_DB_PORT", "5432")
-	os.Setenv("PG_DB_USER", "postgres")
-	os.Setenv("PG_DB_PASSWORD", "!ChangeMe!")
-
-	dsn_knowledge := "postgres://postgres:!ChangeMe!@127.0.0.1:6432/" + dbhelper.Config.Database.Knowledge + "?sslmode=disable"
-	sqldb_knowledge := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn_knowledge), pgdriver.WithTimeout(50*time.Second)))
-	db_knowledge := bun.NewDB(sqldb_knowledge, pgdialect.New())
-	defer db_knowledge.Close()
+	pluginBase, cleanup := setupTestEnvironment(t)
+	if pluginBase == nil {
+		return // Test was skipped
+	}
+	defer cleanup()
 
 	sbom, err := getSBOM("../../js-sbom/tests/yarnv3")
 	if err != nil {
 		t.Errorf("Error getting mock SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start("", sbom, "JS", time.Now(), db_knowledge)
+	out := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge)
 
 	// Assert the expected values
 	assert.NotNil(t, out)
@@ -158,24 +147,18 @@ func TestCreateYarnv3(t *testing.T) {
 }
 
 func TestCreateYarnv4(t *testing.T) {
-	os.Setenv("NPM_URL", "https://replicate.npmjs.com/")
-
-	os.Setenv("PG_DB_HOST", "127.0.0.1")
-	os.Setenv("PG_DB_PORT", "5432")
-	os.Setenv("PG_DB_USER", "postgres")
-	os.Setenv("PG_DB_PASSWORD", "!ChangeMe!")
-
-	dsn_knowledge := "postgres://postgres:!ChangeMe!@127.0.0.1:5432/" + dbhelper.Config.Database.Knowledge + "?sslmode=disable"
-	sqldb_knowledge := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn_knowledge), pgdriver.WithTimeout(50*time.Second)))
-	db_knowledge := bun.NewDB(sqldb_knowledge, pgdialect.New())
-	defer db_knowledge.Close()
+	pluginBase, cleanup := setupTestEnvironment(t)
+	if pluginBase == nil {
+		return // Test was skipped
+	}
+	defer cleanup()
 
 	sbom, err := getSBOM("../../js-sbom/tests/yarnv4")
 	if err != nil {
 		t.Errorf("Error getting mock SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start("", sbom, "JS", time.Now(), db_knowledge)
+	out := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge)
 
 	// Assert the expected values
 	assert.NotNil(t, out)
@@ -186,24 +169,18 @@ func TestCreateYarnv4(t *testing.T) {
 }
 
 func TestCreateYarnWorkspace(t *testing.T) {
-	os.Setenv("NPM_URL", "https://replicate.npmjs.com/")
-
-	os.Setenv("PG_DB_HOST", "127.0.0.1")
-	os.Setenv("PG_DB_PORT", "5432")
-	os.Setenv("PG_DB_USER", "postgres")
-	os.Setenv("PG_DB_PASSWORD", "!ChangeMe!")
-
-	dsn_knowledge := "postgres://postgres:!ChangeMe!@127.0.0.1:5432/" + dbhelper.Config.Database.Knowledge + "?sslmode=disable"
-	sqldb_knowledge := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn_knowledge), pgdriver.WithTimeout(50*time.Second)))
-	db_knowledge := bun.NewDB(sqldb_knowledge, pgdialect.New())
-	defer db_knowledge.Close()
+	pluginBase, cleanup := setupTestEnvironment(t)
+	if pluginBase == nil {
+		return // Test was skipped
+	}
+	defer cleanup()
 
 	sbom, err := getSBOM("../../js-sbom/tests/yarn_workspace")
 	if err != nil {
 		t.Errorf("Error getting mock SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start("", sbom, "JS", time.Now(), db_knowledge)
+	out := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge)
 
 	// Assert the expected values
 	assert.NotNil(t, out)
@@ -214,24 +191,18 @@ func TestCreateYarnWorkspace(t *testing.T) {
 }
 
 func TestCreatePNPMv10_10(t *testing.T) {
-	os.Setenv("NPM_URL", "https://replicate.npmjs.com/")
-
-	os.Setenv("PG_DB_HOST", "127.0.0.1")
-	os.Setenv("PG_DB_PORT", "5432")
-	os.Setenv("PG_DB_USER", "postgres")
-	os.Setenv("PG_DB_PASSWORD", "!ChangeMe!")
-
-	dsn_knowledge := "postgres://postgres:!ChangeMe!@127.0.0.1:5432/" + dbhelper.Config.Database.Knowledge + "?sslmode=disable"
-	sqldb_knowledge := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn_knowledge), pgdriver.WithTimeout(50*time.Second)))
-	db_knowledge := bun.NewDB(sqldb_knowledge, pgdialect.New())
-	defer db_knowledge.Close()
+	pluginBase, cleanup := setupTestEnvironment(t)
+	if pluginBase == nil {
+		return // Test was skipped
+	}
+	defer cleanup()
 
 	sbom, err := getSBOM("../../js-sbom/tests/pnpmv10.10")
 	if err != nil {
 		t.Errorf("Error getting mock SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start("", sbom, "JS", time.Now(), db_knowledge)
+	out := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge)
 
 	// Assert the expected values
 	assert.NotNil(t, out)
@@ -242,24 +213,18 @@ func TestCreatePNPMv10_10(t *testing.T) {
 }
 
 func TestCreateTest(t *testing.T) {
-	os.Setenv("NPM_URL", "https://replicate.npmjs.com/")
-
-	os.Setenv("PG_DB_HOST", "127.0.0.1")
-	os.Setenv("PG_DB_PORT", "5432")
-	os.Setenv("PG_DB_USER", "postgres")
-	os.Setenv("PG_DB_PASSWORD", "!ChangeMe!")
-
-	dsn_knowledge := "postgres://postgres:!ChangeMe!@127.0.0.1:5432/" + dbhelper.Config.Database.Knowledge + "?sslmode=disable"
-	sqldb_knowledge := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn_knowledge), pgdriver.WithTimeout(50*time.Second)))
-	db_knowledge := bun.NewDB(sqldb_knowledge, pgdialect.New())
-	defer db_knowledge.Close()
+	pluginBase, cleanup := setupTestEnvironment(t)
+	if pluginBase == nil {
+		return // Test was skipped
+	}
+	defer cleanup()
 
 	sbom, err := getSBOM("../../js-sbom/tests/test")
 	if err != nil {
 		t.Errorf("Error getting mock SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start("", sbom, "JS", time.Now(), db_knowledge)
+	out := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge)
 
 	// Assert the expected values
 	assert.NotNil(t, out)
@@ -270,22 +235,18 @@ func TestCreateTest(t *testing.T) {
 }
 
 func TestCreatePHP(t *testing.T) {
-	os.Setenv("PG_DB_HOST", "127.0.0.1")
-	os.Setenv("PG_DB_PORT", "5432")
-	os.Setenv("PG_DB_USER", "postgres")
-	os.Setenv("PG_DB_PASSWORD", "!ChangeMe!")
-
-	dsn_knowledge := "postgres://postgres:!ChangeMe!@127.0.0.1:5432/" + dbhelper.Config.Database.Knowledge + "?sslmode=disable"
-	sqldb_knowledge := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn_knowledge), pgdriver.WithTimeout(50*time.Second)))
-	db_knowledge := bun.NewDB(sqldb_knowledge, pgdialect.New())
-	defer db_knowledge.Close()
+	pluginBase, cleanup := setupTestEnvironment(t)
+	if pluginBase == nil {
+		return // Test was skipped
+	}
+	defer cleanup()
 
 	sbom, err := getSBOM("../../php-sbom/tests/test1")
 	if err != nil {
 		t.Errorf("Error getting mock PHP SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start("", sbom, "PHP", time.Now(), db_knowledge)
+	out := vulnerabilities.Start("", sbom, "PHP", time.Now(), pluginBase.DB.Knowledge)
 
 	// Debug output for failing tests
 	if out.AnalysisInfo.Status != codeclarity.SUCCESS {
@@ -316,15 +277,11 @@ func TestCreatePHP(t *testing.T) {
 }
 
 func TestCreatePHPCachet(t *testing.T) {
-	os.Setenv("PG_DB_HOST", "127.0.0.1")
-	os.Setenv("PG_DB_PORT", "5432")
-	os.Setenv("PG_DB_USER", "postgres")
-	os.Setenv("PG_DB_PASSWORD", "!ChangeMe!")
-
-	dsn_knowledge := "postgres://postgres:!ChangeMe!@127.0.0.1:5432/" + dbhelper.Config.Database.Knowledge + "?sslmode=disable"
-	sqldb_knowledge := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn_knowledge), pgdriver.WithTimeout(50*time.Second)))
-	db_knowledge := bun.NewDB(sqldb_knowledge, pgdialect.New())
-	defer db_knowledge.Close()
+	pluginBase, cleanup := setupTestEnvironment(t)
+	if pluginBase == nil {
+		return // Test was skipped
+	}
+	defer cleanup()
 
 	sbom, err := getSBOM("../../php-sbom/tests/test8-cachet")
 	if err != nil {
@@ -365,7 +322,7 @@ func TestCreatePHPCachet(t *testing.T) {
 		}
 	}
 
-	out := vulnerabilities.Start("", sbom, "PHP", time.Now(), db_knowledge)
+	out := vulnerabilities.Start("", sbom, "PHP", time.Now(), pluginBase.DB.Knowledge)
 
 	// Debug output for failing tests
 	if out.AnalysisInfo.Status != codeclarity.SUCCESS {
@@ -416,38 +373,34 @@ func TestCreatePHPCachet(t *testing.T) {
 
 func TestPHPRepositoryFunctions(t *testing.T) {
 	// Test PHP repository functions without database dependency
-	os.Setenv("PG_DB_HOST", "127.0.0.1")
-	os.Setenv("PG_DB_PORT", "5432")
-	os.Setenv("PG_DB_USER", "postgres")
-	os.Setenv("PG_DB_PASSWORD", "!ChangeMe!")
-
-	dsn_knowledge := "postgres://postgres:!ChangeMe!@127.0.0.1:5432/" + dbhelper.Config.Database.Knowledge + "?sslmode=disable"
-	sqldb_knowledge := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn_knowledge), pgdriver.WithTimeout(50*time.Second)))
-	db_knowledge := bun.NewDB(sqldb_knowledge, pgdialect.New())
-	defer db_knowledge.Close()
+	pluginBase, cleanup := setupTestEnvironment(t)
+	if pluginBase == nil {
+		return // Test was skipped
+	}
+	defer cleanup()
 
 	// Test GetVersionStrings for non-existent package (should return empty, no error)
-	versions, err := phpRepository.PhpPackageRepository.GetVersionStrings("non-existent/package", db_knowledge)
+	versions, err := phpRepository.PhpPackageRepository.GetVersionStrings("non-existent/package", pluginBase.DB.Knowledge)
 	assert.NoError(t, err)
 	assert.Empty(t, versions)
 
 	// Test GetVersionStringsBelow for non-existent package
-	versionsBelow, err := phpRepository.PhpPackageRepository.GetVersionStringsBelow("non-existent/package", "1.0.0", 10, db_knowledge)
+	versionsBelow, err := phpRepository.PhpPackageRepository.GetVersionStringsBelow("non-existent/package", "1.0.0", 10, pluginBase.DB.Knowledge)
 	assert.NoError(t, err)
 	assert.Empty(t, versionsBelow)
 
 	// Test GetVersionStringsAbove for non-existent package
-	versionsAbove, err := phpRepository.PhpPackageRepository.GetVersionStringsAbove("non-existent/package", "1.0.0", 10, db_knowledge)
+	versionsAbove, err := phpRepository.PhpPackageRepository.GetVersionStringsAbove("non-existent/package", "1.0.0", 10, pluginBase.DB.Knowledge)
 	assert.NoError(t, err)
 	assert.Empty(t, versionsAbove)
 
 	// Test GetFirstVersionString for non-existent package (should return error)
-	_, err = phpRepository.PhpPackageRepository.GetFirstVersionString("non-existent/package", db_knowledge)
+	_, err = phpRepository.PhpPackageRepository.GetFirstVersionString("non-existent/package", pluginBase.DB.Knowledge)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "no versions")
 
 	// Test GetLastVersionString for non-existent package (should return error)
-	_, err = phpRepository.PhpPackageRepository.GetLastVersionString("non-existent/package", db_knowledge)
+	_, err = phpRepository.PhpPackageRepository.GetLastVersionString("non-existent/package", pluginBase.DB.Knowledge)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "no versions")
 }
