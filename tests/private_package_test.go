@@ -31,7 +31,7 @@ func TestPrivatePackageVulnerabilityDetection(t *testing.T) {
 			for _, source := range vuln.Sources {
 				if source == vulnerabilityFinderTypes.PRIVATE_ANALYSIS {
 					foundPrivateVulns = true
-					t.Logf("Found private package vulnerability: %s for package %s", 
+					t.Logf("Found private package vulnerability: %s for package %s",
 						vuln.VulnerabilityId, vuln.AffectedDependency)
 					break
 				}
@@ -198,12 +198,12 @@ func createMockSBOMWithProblematicPackages() sbomTypes.Output {
 
 // Helper function to check if string contains substring
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && 
-		(s == substr || 
-		 (len(s) > len(substr) && 
-		  (s[:len(substr)] == substr || 
-		   s[len(s)-len(substr):] == substr || 
-		   containsMiddle(s, substr))))
+	return len(s) >= len(substr) &&
+		(s == substr ||
+			(len(s) > len(substr) &&
+				(s[:len(substr)] == substr ||
+					s[len(s)-len(substr):] == substr ||
+					containsMiddle(s, substr))))
 }
 
 func containsMiddle(s, substr string) bool {

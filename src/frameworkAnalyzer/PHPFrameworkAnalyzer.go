@@ -8,8 +8,8 @@ import (
 	sbomTypes "github.com/CodeClarityCE/plugin-sbom-javascript/src/types/sbom/js"
 	vulnerabilityFinder "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/types"
 	frameworkMatcher "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/vulnerabilityMatcher/frameworks"
-	knowledge_db "github.com/CodeClarityCE/utility-types/knowledge_db"
 	semver "github.com/CodeClarityCE/utility-node-semver"
+	knowledge_db "github.com/CodeClarityCE/utility-types/knowledge_db"
 	"github.com/uptrace/bun"
 )
 
@@ -425,7 +425,7 @@ func (analyzer *PHPFrameworkAnalyzer) getCakePHPSecurityRules(framework Framewor
 // convertCVSSToSeverity converts CVSS score to VulnerabilityMatchSeverity struct
 func (analyzer *PHPFrameworkAnalyzer) convertCVSSToSeverity(cvss float64) vulnerabilityFinder.VulnerabilityMatchSeverity {
 	var severityClass vulnerabilityFinder.CVSS_CLASSV3
-	
+
 	// Convert CVSS score to severity class according to CVSS v3.1 standard
 	if cvss >= 9.0 {
 		severityClass = vulnerabilityFinder.CRITICAL
@@ -467,11 +467,11 @@ func (analyzer *PHPFrameworkAnalyzer) isVersionAffected(version, constraint stri
 // This allows the report generator to display affected version information
 func (analyzer *PHPFrameworkAnalyzer) createAffectedInfoForFramework(frameworkVersion string) []vulnerabilityFinder.AffectedVersion {
 	affectedVersions := []vulnerabilityFinder.AffectedVersion{}
-	
+
 	// For framework vulnerabilities, we create a simple AffectedInfo that indicates
 	// the current version is affected. This allows the report generator to display
 	// version information properly.
-	
+
 	// Parse the framework version using Composer semver rules
 	frameworkSemver, err := semver.ParseSemverWithEcosystem(frameworkVersion, semver.Composer)
 	if err != nil {
@@ -488,7 +488,7 @@ func (analyzer *PHPFrameworkAnalyzer) createAffectedInfoForFramework(frameworkVe
 		})
 		return affectedVersions
 	}
-	
+
 	// Create an exact match for the current framework version
 	affectedVersions = append(affectedVersions, vulnerabilityFinder.AffectedVersion{
 		Exact: []vulnerabilityFinder.AffectedExact{
@@ -504,6 +504,6 @@ func (analyzer *PHPFrameworkAnalyzer) createAffectedInfoForFramework(frameworkVe
 			},
 		},
 	})
-	
+
 	return affectedVersions
 }

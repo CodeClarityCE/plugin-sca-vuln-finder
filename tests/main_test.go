@@ -8,8 +8,8 @@ import (
 	vulnerabilities "github.com/CodeClarityCE/plugin-sca-vuln-finder/src"
 	phpRepository "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/repository/php"
 	vulnerabilityFinder "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/types"
-	codeclarity "github.com/CodeClarityCE/utility-types/codeclarity_db"
 	"github.com/CodeClarityCE/utility-types/boilerplates"
+	codeclarity "github.com/CodeClarityCE/utility-types/codeclarity_db"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -343,13 +343,13 @@ func TestCreatePHPCachet(t *testing.T) {
 
 	// Log vulnerability analysis results
 	t.Logf("Found %d vulnerabilities", len(workspace.Vulnerabilities))
-	
+
 	// Print first few vulnerabilities for debugging
 	for i, vuln := range workspace.Vulnerabilities {
 		if i >= 5 {
 			break
 		}
-		t.Logf("Vulnerability %d: %s in %s@%s (Severity: %v)", 
+		t.Logf("Vulnerability %d: %s in %s@%s (Severity: %v)",
 			i+1, vuln.VulnerabilityId, vuln.AffectedDependency, vuln.AffectedVersion, vuln.Severity)
 	}
 

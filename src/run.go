@@ -89,7 +89,7 @@ func Start(projectURL string, sbom sbomTypes.Output, languageId string, start ti
 		// Analyze private packages for vulnerabilities (for both JS and PHP)
 		privateAnalyzer := privatePackageAnalyzer.NewPrivatePackageAnalyzer(knowledge)
 		privateVulns := privateAnalyzer.AnalyzePrivatePackages(sbom, workspace.Dependencies)
-		
+
 		// Merge private package vulnerabilities with existing vulnerabilities
 		vulns = append(vulns, privateVulns...)
 

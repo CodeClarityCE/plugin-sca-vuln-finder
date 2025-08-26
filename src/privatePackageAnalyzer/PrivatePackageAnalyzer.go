@@ -13,11 +13,11 @@ import (
 
 // PrivateRepositoryInfo represents private repository metadata from SBOM
 type PrivateRepositoryInfo struct {
-	PrivatePackagesCount    int                    `json:"private_packages_count"`
-	PrivateRepositories     int                    `json:"private_repositories"`
-	AuthenticationSummary   map[string]int         `json:"authentication_summary"`
-	ResolutionErrorSummary  map[string]int         `json:"resolution_error_summary"`
-	PrivateRepositoriesList []PrivateRepository    `json:"private_repositories_list"`
+	PrivatePackagesCount    int                 `json:"private_packages_count"`
+	PrivateRepositories     int                 `json:"private_repositories"`
+	AuthenticationSummary   map[string]int      `json:"authentication_summary"`
+	ResolutionErrorSummary  map[string]int      `json:"resolution_error_summary"`
+	PrivateRepositoriesList []PrivateRepository `json:"private_repositories_list"`
 }
 
 // PrivateRepository represents a private repository configuration
@@ -52,12 +52,12 @@ func (ppa *PrivatePackageAnalyzer) AnalyzePrivatePackages(sbom sbomTypes.Output,
 		return vulnerabilities
 	}
 
-	log.Printf("Found %d private packages in %d private repositories", 
+	log.Printf("Found %d private packages in %d private repositories",
 		privateRepoInfo.PrivatePackagesCount, privateRepoInfo.PrivateRepositories)
 
 	// Identify private packages
 	privatePackages := ppa.identifyPrivatePackages(dependencies, privateRepoInfo)
-	
+
 	// Analyze each private package for potential vulnerabilities
 	for packageName, versions := range privatePackages {
 		for version, versionInfo := range versions {
@@ -75,7 +75,7 @@ func (ppa *PrivatePackageAnalyzer) AnalyzePrivatePackages(sbom sbomTypes.Output,
 func (ppa *PrivatePackageAnalyzer) extractPrivateRepositoryInfo(sbom sbomTypes.Output) *PrivateRepositoryInfo {
 	// The SBOM Extra field structure varies between JS and PHP SBOMs
 	// We need to use reflection or type assertion to handle both types
-	
+
 	// Try to convert the Extra field to a map for PHP SBOMs
 	extraData, err := json.Marshal(sbom.AnalysisInfo.Extra)
 	if err != nil {
@@ -190,11 +190,11 @@ func (ppa *PrivatePackageAnalyzer) matchesPattern(packageName, pattern string) b
 // isPrivateRepositoryURL checks if a URL indicates a private repository
 func (ppa *PrivatePackageAnalyzer) isPrivateRepositoryURL(url string) bool {
 	url = strings.ToLower(url)
-	
+
 	// Common private repository indicators
 	privateIndicators := []string{
 		"repo.company.com",
-		"packages.company.com", 
+		"packages.company.com",
 		"gitlab.company.com",
 		"github.company.com",
 		".internal",
@@ -219,7 +219,7 @@ func (ppa *PrivatePackageAnalyzer) isPrivateRepositoryURL(url string) bool {
 // hasPrivatePackageIndicators checks for private package naming patterns
 func (ppa *PrivatePackageAnalyzer) hasPrivatePackageIndicators(packageName string, versionInfo sbomTypes.Versions) bool {
 	packageName = strings.ToLower(packageName)
-	
+
 	// Common private package naming patterns
 	privatePatterns := []string{
 		"company/",
@@ -239,9 +239,9 @@ func (ppa *PrivatePackageAnalyzer) hasPrivatePackageIndicators(packageName strin
 	// Check licenses for proprietary indicators
 	for _, license := range versionInfo.Licenses {
 		license = strings.ToLower(license)
-		if strings.Contains(license, "proprietary") || 
-		   strings.Contains(license, "confidential") ||
-		   strings.Contains(license, "internal") {
+		if strings.Contains(license, "proprietary") ||
+			strings.Contains(license, "confidential") ||
+			strings.Contains(license, "internal") {
 			return true
 		}
 	}
@@ -286,7 +286,7 @@ func (ppa *PrivatePackageAnalyzer) analyzePrivatePackagePatterns(packageName, ve
 		{
 			pattern:     "debug",
 			description: "Debug package in production - potential information disclosure",
-			severity:    "MEDIUM", 
+			severity:    "MEDIUM",
 			cwe:         "CWE-200",
 		},
 		{

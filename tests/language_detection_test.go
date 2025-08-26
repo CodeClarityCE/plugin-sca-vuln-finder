@@ -6,8 +6,8 @@ import (
 	"time"
 
 	vulnerabilities "github.com/CodeClarityCE/plugin-sca-vuln-finder/src"
-	codeclarity "github.com/CodeClarityCE/utility-types/codeclarity_db"
 	"github.com/CodeClarityCE/utility-types/boilerplates"
+	codeclarity "github.com/CodeClarityCE/utility-types/codeclarity_db"
 	"github.com/stretchr/testify/assert"
 )
 

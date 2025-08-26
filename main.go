@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	amqp_helper "github.com/CodeClarityCE/utility-amqp-helper"
+	"log"
 	"sort"
 	"time"
 
@@ -13,8 +13,8 @@ import (
 	vulnerabilities "github.com/CodeClarityCE/plugin-sca-vuln-finder/src"
 	"github.com/CodeClarityCE/plugin-sca-vuln-finder/src/outputGenerator"
 	vulnerabilityFinder "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/types"
-	"github.com/CodeClarityCE/utility-types/boilerplates"
 	types_amqp "github.com/CodeClarityCE/utility-types/amqp"
+	"github.com/CodeClarityCE/utility-types/boilerplates"
 	codeclarity "github.com/CodeClarityCE/utility-types/codeclarity_db"
 	exceptionManager "github.com/CodeClarityCE/utility-types/exceptions"
 	plugin "github.com/CodeClarityCE/utility-types/plugin_db"
@@ -62,7 +62,7 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 	// Look for SBOM results in all completed stages, not just the "previous" stage
 	// This makes vuln-finder more flexible with dispatcher scheduling
 	log.Printf("Scanning all stages for SBOM results. Current stage: %d, Total stages: %d", analysis_document.Stage, len(analysis_document.Steps))
-	
+
 	// Search through all stages to find completed SBOM plugins
 	for stageIndex := 0; stageIndex < len(analysis_document.Steps); stageIndex++ {
 		log.Printf("Checking stage %d for SBOM results", stageIndex)
@@ -71,7 +71,7 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 			if step.Status != codeclarity.SUCCESS || step.Result == nil {
 				continue
 			}
-			
+
 			switch step.Name {
 			case "js-sbom":
 				log.Printf("Found completed js-sbom in stage %d", stageIndex)
@@ -112,7 +112,7 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 	}
 
 	log.Printf("SBOM search complete. Found %d SBOM results", len(sbomKeys))
-	
+
 	// If no SBOMs were found, return success with empty results
 	if len(sbomKeys) == 0 {
 		log.Printf("No SBOM results found - this might indicate SBOM plugins haven't completed yet or failed")
