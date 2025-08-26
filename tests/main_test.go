@@ -8,7 +8,7 @@ import (
 	vulnerabilities "github.com/CodeClarityCE/plugin-sca-vuln-finder/src"
 	phpRepository "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/repository/php"
 	vulnerabilityFinder "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/types"
-	"github.com/CodeClarityCE/utility-types/boilerplates"
+	"github.com/CodeClarityCE/utility-boilerplates"
 	codeclarity "github.com/CodeClarityCE/utility-types/codeclarity_db"
 	"github.com/stretchr/testify/assert"
 )
