@@ -11,8 +11,12 @@ import (
 
 	"github.com/CodeClarityCE/plugin-sca-vuln-finder/src/conflictResolver"
 	ecosystemTypes "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/ecosystemAnalyzer/types"
+	extensionAnalyzer "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/extensionAnalyzer"
+	frameworkAnalyzer "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/frameworkAnalyzer"
 	outputGenerator "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/outputGenerator"
+	privatePackageAnalyzer "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/privatePackageAnalyzer"
 	npmRepository "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/repository/npm"
+	phpRepository "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/repository/php"
 	vulnerabilityFinder "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/types"
 	vulnerabilitylookup "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/vulnerabilityLookup"
 	codeclarity "github.com/CodeClarityCE/utility-types/codeclarity_db"
@@ -38,6 +42,12 @@ func Start(projectURL string, sbom sbomTypes.Output, languageId string, start ti
 			ConflictResolver:  conflictResolver.TrustOSV,
 			PackageRepository: npmRepository.NpmPackageRepository,
 		}
+	} else if languageId == "PHP" {
+		vulnerabilityMatcher = matcher.VulnerabilityMatcher{
+			Ecosystems:        []ecosystemTypes.Ecosystem{ecosystemTypes.PHP},
+			ConflictResolver:  conflictResolver.TrustOSV,
+			PackageRepository: phpRepository.PhpPackageRepository,
+		}
 	} else {
 		exceptionManager.AddError("", exceptionManager.UNSUPPORTED_LANGUAGE_REQUESTED, "", exceptionManager.UNSUPPORTED_LANGUAGE_REQUESTED)
 		return outputGenerator.FailureOutput(sbom.AnalysisInfo, start)
@@ -46,6 +56,43 @@ func Start(projectURL string, sbom sbomTypes.Output, languageId string, start ti
 	workspaces := map[string]vulnerabilityFinder.Workspace{}
 	for workspaceKey, workspace := range sbom.WorkSpaces {
 		vulns := vulnerabilityMatcher.GetWorkspaceVulnerabilities(workspace.Dependencies, knowledge)
+
+		// For PHP projects, also analyze PHP extension vulnerabilities
+		if languageId == "PHP" {
+			analyzer := extensionAnalyzer.NewPHPExtensionAnalyzer()
+
+			// Extract extensions from SBOM
+			extensions := analyzer.ExtractExtensionsFromSBOM(sbom)
+
+			// Filter to only relevant extensions for vulnerability tracking
+			relevantExtensions := analyzer.FilterRelevantExtensions(extensions)
+
+			// Analyze extension vulnerabilities
+			extensionVulns := analyzer.AnalyzeExtensionVulnerabilities(relevantExtensions, knowledge)
+
+			// Merge extension vulnerabilities with package vulnerabilities
+			vulns = append(vulns, extensionVulns...)
+
+			// Also analyze PHP framework-specific vulnerabilities with real database queries
+			frameworkAnalyzer := frameworkAnalyzer.NewPHPFrameworkAnalyzer()
+
+			// Extract framework information from SBOM
+			frameworks := frameworkAnalyzer.ExtractFrameworkFromSBOM(sbom)
+
+			// Analyze framework-specific vulnerabilities using real OSV/NVD/FriendsOfPHP queries
+			frameworkVulns := frameworkAnalyzer.AnalyzeFrameworkVulnerabilities(frameworks, knowledge)
+
+			// Merge framework vulnerabilities with existing vulnerabilities
+			vulns = append(vulns, frameworkVulns...)
+		}
+
+		// Analyze private packages for vulnerabilities (for both JS and PHP)
+		privateAnalyzer := privatePackageAnalyzer.NewPrivatePackageAnalyzer(knowledge)
+		privateVulns := privateAnalyzer.AnalyzePrivatePackages(sbom, workspace.Dependencies)
+
+		// Merge private package vulnerabilities with existing vulnerabilities
+		vulns = append(vulns, privateVulns...)
+
 		workspaces[workspaceKey] = vulnerabilityFinder.Workspace{
 			Vulnerabilities: vulns,
 		}

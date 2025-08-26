@@ -1,12 +1,12 @@
 services:
-  plugin-js-vuln-finder:
+  plugin-vuln-finder:
     build:
       context: ../../backend
-      dockerfile: plugins/js-vuln-finder/.cloud/docker/Dockerfile
+      dockerfile: plugins/vuln-finder/.cloud/docker/Dockerfile
       target: plugin-dev
       args:
-        - PLUGINNAME=js-vuln-finder
-    image: codeclarityce/js-vuln-finder-dev:latest
+        - PLUGINNAME=vuln-finder
+    image: codeclarityce/vuln-finder-dev:latest
     restart: always
     volumes:
       - ../../backend:/codeclarity
@@ -14,8 +14,6 @@ services:
       rabbitmq:
         condition: service_healthy
       db:
-        condition: service_started
-      pg_bouncer:
         condition: service_started
       adminer:
         condition: service_started
