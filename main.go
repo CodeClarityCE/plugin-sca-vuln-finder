@@ -113,6 +113,12 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 
 	log.Printf("SBOM search complete. Found %d SBOM results", len(sbomKeys))
 
+	// Log analysis configuration for debugging
+	log.Printf("=== VULNERABILITY FINDER ANALYSIS DEBUG ===")
+	log.Printf("Analysis ID: %s", dispatcherMessage.AnalysisId.String())
+	log.Printf("Project ID: %s", project.Id.String())
+	log.Printf("Project URL: %s", project.Url)
+
 	// If no SBOMs were found, return success with empty results
 	if len(sbomKeys) == 0 {
 		log.Printf("No SBOM results found - this might indicate SBOM plugins haven't completed yet or failed")
@@ -124,6 +130,7 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 		// Process the first available SBOM (for now, we'll process just the first one)
 		// In the future, this could be enhanced to merge multiple SBOM results
 		sbomInfo := sbomKeys[0]
+		log.Printf("Processing SBOM: ID=%s, Language=%s, Plugin=%s", sbomInfo.id.String(), sbomInfo.language, sbomInfo.pluginName)
 
 		res := codeclarity.Result{
 			Id: sbomInfo.id,
@@ -144,7 +151,45 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 			)
 			vulnOutput = outputGenerator.FailureOutput(sbom.AnalysisInfo, start)
 		} else {
+			// Log SBOM details before vulnerability detection
+			log.Printf("SBOM contains %d workspaces", len(sbom.WorkSpaces))
+			totalPackages := 0
+			for workspace, deps := range sbom.WorkSpaces {
+				log.Printf("Workspace '%s': %d dependencies", workspace, len(deps.Dependencies))
+				totalPackages += len(deps.Dependencies)
+			}
+			log.Printf("Total packages across all workspaces: %d", totalPackages)
+
 			vulnOutput = vulnerabilities.Start(project.Url, sbom, sbomInfo.language, start, databases.Knowledge)
+
+			// Log vulnerability detection results
+			if vulnOutput.AnalysisInfo.Status == codeclarity.SUCCESS {
+				totalVulns := 0
+				workspacesCount := len(vulnOutput.WorkSpaces)
+				log.Printf("Vulnerability detection completed successfully")
+				log.Printf("Found vulnerabilities in %d workspaces", workspacesCount)
+
+				for wsName, ws := range vulnOutput.WorkSpaces {
+					vulnCount := len(ws.Vulnerabilities)
+					totalVulns += vulnCount
+					log.Printf("Workspace '%s': %d vulnerabilities", wsName, vulnCount)
+
+					// Log first few vulnerabilities for debugging
+					for i, vuln := range ws.Vulnerabilities {
+						if i < 3 { // Only log first 3 to avoid spam
+							log.Printf("  - %s: %s (severity: %s, score: %.1f)",
+								vuln.VulnerabilityId, vuln.AffectedDependency,
+								vuln.Severity.SeverityClass, vuln.Severity.Severity)
+						}
+					}
+					if len(ws.Vulnerabilities) > 3 {
+						log.Printf("  ... and %d more vulnerabilities", len(ws.Vulnerabilities)-3)
+					}
+				}
+				log.Printf("TOTAL VULNERABILITIES DETECTED: %d", totalVulns)
+			} else {
+				log.Printf("Vulnerability detection failed with status: %s", vulnOutput.AnalysisInfo.Status)
+			}
 		}
 	}
 
@@ -179,7 +224,15 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 		// Track unique vulnerabilities to avoid double counting
 		uniqueVulns := make(map[string]topVuln)
 
+		log.Printf("=== BUILDING NOTIFICATION SUMMARY ===")
 		if workspaces, ok := workspacesAny.(map[string]vulnerabilityFinder.Workspace); ok {
+			totalBeforeDedup := 0
+			for wsName, ws := range workspaces {
+				totalBeforeDedup += len(ws.Vulnerabilities)
+				log.Printf("Processing workspace '%s' with %d vulnerabilities for summary", wsName, len(ws.Vulnerabilities))
+			}
+			log.Printf("Total vulnerabilities before deduplication: %d", totalBeforeDedup)
+
 			for _, ws := range workspaces {
 				for _, v := range ws.Vulnerabilities {
 					// Only count each unique vulnerability ID once
@@ -203,6 +256,11 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 				tops = append(tops, vuln)
 			}
 			total := len(uniqueVulns)
+			log.Printf("After deduplication: %d unique vulnerabilities", total)
+			log.Printf("Severity counts: CRITICAL=%d, HIGH=%d, MEDIUM=%d, LOW=%d, NONE=%d",
+				severityCounts["CRITICAL"], severityCounts["HIGH"],
+				severityCounts["MEDIUM"], severityCounts["LOW"], severityCounts["NONE"])
+
 			// sort by severity desc
 			sort.Slice(tops, func(i, j int) bool { return tops[i].SeverityScore > tops[j].SeverityScore })
 			if len(tops) > 5 {
@@ -215,6 +273,7 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 					break
 				}
 			}
+			log.Printf("Max severity: %s", maxSeverity)
 			notif := map[string]any{
 				"type":            "vuln_summary",
 				"analysis_id":     dispatcherMessage.AnalysisId,

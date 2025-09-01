@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -54,7 +55,16 @@ func Start(projectURL string, sbom sbomTypes.Output, languageId string, start ti
 	}
 
 	workspaces := map[string]vulnerabilityFinder.Workspace{}
-	for workspaceKey, workspace := range sbom.WorkSpaces {
+
+	// Create deterministic ordering by sorting workspace keys
+	workspaceKeys := make([]string, 0, len(sbom.WorkSpaces))
+	for workspaceKey := range sbom.WorkSpaces {
+		workspaceKeys = append(workspaceKeys, workspaceKey)
+	}
+	slices.Sort(workspaceKeys)
+
+	for _, workspaceKey := range workspaceKeys {
+		workspace := sbom.WorkSpaces[workspaceKey]
 		vulns := vulnerabilityMatcher.GetWorkspaceVulnerabilities(workspace.Dependencies, knowledge)
 
 		// For PHP projects, also analyze PHP extension vulnerabilities
