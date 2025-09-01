@@ -7,5 +7,12 @@
         "php-sbom"
     ],
     "description": "A plugin to find vulnerabilities in JavaScript and PHP projects",
-    "config": {}
+    "config": {
+        "vulnerabilityPolicy": {
+            "name": "Vulnerability Policy",
+            "type": "Array<string>",
+            "required": false,
+            "description": "A list of vulnerabilities that are blacklisted in the project"
+        }
+    }
 }
