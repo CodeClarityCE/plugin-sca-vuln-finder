@@ -15,6 +15,7 @@ const (
 	NVD              VulnerabilitySource = "NVD"
 	OSV              VulnerabilitySource = "OSV"
 	FriendsOfPHP     VulnerabilitySource = "FriendsOfPHP"
+	GCVE             VulnerabilitySource = "GCVE"
 	PRIVATE_ANALYSIS VulnerabilitySource = "PRIVATE_ANALYSIS"
 )
 
@@ -46,6 +47,7 @@ type WinningSource string
 const (
 	WINNER_NVD     WinningSource = "NVD"
 	WINNER_OSV     WinningSource = "OSV"
+	WINNER_GCVE    WinningSource = "GCVE"
 	WINNER_NEITHER WinningSource = "NEITHER"
 )
 
@@ -168,13 +170,28 @@ type OSVVulnerability struct {
 	SeverityType                SeverityType
 }
 
+type GCVEVulnerability struct {
+	Vulnerability               knowledge.GCVEItem
+	Dependency                  Dependency
+	AffectedInfo                []AffectedVersion
+	VulnerableEvidenceRange     VulnerableEvidenceRange
+	VulnerableEvidenceExact     VulnerableEvidenceExact
+	VulnerableEvidenceUniversal VulnerableEvidenceUniversal
+	VulnerableEvidenceType      VulnerableEvidenceType
+	Vulnerable                  bool
+	ConflictFlag                conflict.ConflictFlag
+	Severity                    float64
+	SeverityType                SeverityType
+}
+
 type Vulnerability struct {
 	Sources            []VulnerabilitySource
 	AffectedDependency string
 	AffectedVersion    string
 	VulnerabilityId    string
-	OSVMatch           *OSVVulnerability `json:"OSVMatch,omitempty"`
-	NVDMatch           *NVDVulnerability `json:"NVDMatch,omitempty"`
+	OSVMatch           *OSVVulnerability  `json:"OSVMatch,omitempty"`
+	NVDMatch           *NVDVulnerability  `json:"NVDMatch,omitempty"`
+	GCVEMatch          *GCVEVulnerability `json:"GCVEMatch,omitempty"`
 	Severity           VulnerabilityMatchSeverity
 	Weaknesses         []VulnerabilityMatchWeakness
 	Conflict           Conflict
@@ -202,6 +219,7 @@ type Conflict struct {
 type Pairs struct {
 	NVD            NVDVulnerability
 	OSV            OSVVulnerability
+	GCVE           GCVEVulnerability
 	ConflictWinner conflict.ResolveWinner
 	ConflictFlag   conflict.ConflictFlag
 }
