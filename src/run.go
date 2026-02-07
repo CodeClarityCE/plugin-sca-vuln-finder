@@ -40,13 +40,13 @@ func Start(projectURL string, sbom sbomTypes.Output, languageId string, start ti
 	if languageId == "JS" {
 		vulnerabilityMatcher = matcher.VulnerabilityMatcher{
 			Ecosystems:        []ecosystemTypes.Ecosystem{ecosystemTypes.NODEJS_OR_JS},
-			ConflictResolver:  conflictResolver.TrustOSV,
+			ConflictResolver:  conflictResolver.TrustGCVE,
 			PackageRepository: npmRepository.NpmPackageRepository,
 		}
 	} else if languageId == "PHP" {
 		vulnerabilityMatcher = matcher.VulnerabilityMatcher{
 			Ecosystems:        []ecosystemTypes.Ecosystem{ecosystemTypes.PHP},
-			ConflictResolver:  conflictResolver.TrustOSV,
+			ConflictResolver:  conflictResolver.TrustGCVE,
 			PackageRepository: phpRepository.PhpPackageRepository,
 		}
 	} else {
