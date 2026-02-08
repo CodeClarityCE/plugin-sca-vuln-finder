@@ -37,19 +37,20 @@ func Start(projectURL string, sbom sbomTypes.Output, languageId string, start ti
 
 	var vulnerabilityMatcher matcher.VulnerabilityMatcher
 
-	if languageId == "JS" {
+	switch languageId {
+	case "JS":
 		vulnerabilityMatcher = matcher.VulnerabilityMatcher{
 			Ecosystems:        []ecosystemTypes.Ecosystem{ecosystemTypes.NODEJS_OR_JS},
-			ConflictResolver:  conflictResolver.TrustGCVE,
+			ConflictResolver:  conflictResolver.TrustOSVFirst,
 			PackageRepository: npmRepository.NpmPackageRepository,
 		}
-	} else if languageId == "PHP" {
+	case "PHP":
 		vulnerabilityMatcher = matcher.VulnerabilityMatcher{
 			Ecosystems:        []ecosystemTypes.Ecosystem{ecosystemTypes.PHP},
-			ConflictResolver:  conflictResolver.TrustGCVE,
+			ConflictResolver:  conflictResolver.TrustOSVFirst,
 			PackageRepository: phpRepository.PhpPackageRepository,
 		}
-	} else {
+	default:
 		exceptionManager.AddError("", exceptionManager.UNSUPPORTED_LANGUAGE_REQUESTED, "", exceptionManager.UNSUPPORTED_LANGUAGE_REQUESTED)
 		return outputGenerator.FailureOutput(sbom.AnalysisInfo, start)
 	}
