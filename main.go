@@ -75,9 +75,15 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 			switch step.Name {
 			case "js-sbom":
 				log.Printf("Found completed js-sbom in stage %d", stageIndex)
-				sbomKeyUUID, err := uuid.Parse(step.Result["sbomKey"].(string))
+				sbomKeyStr, ok := step.Result["sbomKey"].(string)
+				if !ok {
+					log.Printf("Warning: sbomKey not found or not a string in js-sbom result at stage %d", stageIndex)
+					continue
+				}
+				sbomKeyUUID, err := uuid.Parse(sbomKeyStr)
 				if err != nil {
-					panic(err)
+					log.Printf("Warning: failed to parse js-sbom key UUID: %v", err)
+					continue
 				}
 				sbomKeys = append(sbomKeys, struct {
 					id         uuid.UUID
@@ -86,9 +92,15 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 				}{sbomKeyUUID, "JS", "js-sbom"})
 			case "php-sbom":
 				log.Printf("Found completed php-sbom in stage %d", stageIndex)
-				sbomKeyUUID, err := uuid.Parse(step.Result["sbomKey"].(string))
+				sbomKeyStr, ok := step.Result["sbomKey"].(string)
+				if !ok {
+					log.Printf("Warning: sbomKey not found or not a string in php-sbom result at stage %d", stageIndex)
+					continue
+				}
+				sbomKeyUUID, err := uuid.Parse(sbomKeyStr)
 				if err != nil {
-					panic(err)
+					log.Printf("Warning: failed to parse php-sbom key UUID: %v", err)
+					continue
 				}
 				sbomKeys = append(sbomKeys, struct {
 					id         uuid.UUID
@@ -108,7 +120,7 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 	}
 	err := databases.Codeclarity.NewSelect().Model(&project).WherePK().Scan(context.Background())
 	if err != nil {
-		panic(err)
+		return nil, codeclarity.FAILURE, fmt.Errorf("failed to fetch project: %w", err)
 	}
 
 	log.Printf("SBOM search complete. Found %d SBOM results", len(sbomKeys))
@@ -137,12 +149,15 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 		}
 		err = databases.Codeclarity.NewSelect().Model(&res).Where("id = ?", sbomInfo.id).Scan(context.Background())
 		if err != nil {
-			panic(err)
+			return nil, codeclarity.FAILURE, fmt.Errorf("failed to fetch SBOM result %s: %w", sbomInfo.id, err)
 		}
 
 		sbom := sbom.Output{}
 
-		resultBytes := res.Result.([]byte)
+		resultBytes, ok := res.Result.([]byte)
+		if !ok {
+			return nil, codeclarity.FAILURE, fmt.Errorf("SBOM result is not []byte for %s", sbomInfo.pluginName)
+		}
 		err = json.Unmarshal(resultBytes, &sbom)
 		if err != nil {
 			exceptionManager.AddError(
@@ -201,7 +216,7 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 	}
 	_, err = databases.Codeclarity.NewInsert().Model(&vuln_result).Exec(context.Background())
 	if err != nil {
-		panic(err)
+		return nil, codeclarity.FAILURE, fmt.Errorf("failed to insert vulnerability result: %w", err)
 	}
 
 	// Prepare the result to store in step

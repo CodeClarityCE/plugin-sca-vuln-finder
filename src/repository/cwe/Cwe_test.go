@@ -17,10 +17,16 @@ func TestGetCWE(t *testing.T) {
 	db_knowledge := bun.NewDB(sqldb_knowledge, pgdialect.New())
 	defer db_knowledge.Close()
 
+	// Skip if database is not available
+	if err := sqldb_knowledge.Ping(); err != nil {
+		t.Skipf("Knowledge database not available, skipping: %v", err)
+	}
+
 	// Call the GetCWE function
 	cwe, err := GetCWE("123", db_knowledge)
 
 	// Assert the expected values
 	assert.NoError(t, err)
-	assert.Equal(t, db_knowledge, cwe)
+	assert.Equal(t, "123", cwe.CWEId)
+	assert.NotEmpty(t, cwe.Name)
 }

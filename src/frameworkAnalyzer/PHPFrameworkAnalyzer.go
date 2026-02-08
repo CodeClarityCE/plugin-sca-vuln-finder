@@ -446,18 +446,23 @@ func (analyzer *PHPFrameworkAnalyzer) convertCVSSToSeverity(cvss float64) vulner
 	}
 }
 
-// isVersionAffected checks if a version matches a constraint (simplified version comparison)
+// isVersionAffected checks if a version matches a constraint using semver comparison
 func (analyzer *PHPFrameworkAnalyzer) isVersionAffected(version, constraint string) bool {
-	// Simplified version comparison - in production this should use proper semver
 	if version == "unknown" || version == "" {
 		return true // Assume affected if version is unknown
 	}
 
-	// Basic constraint parsing for demonstration
 	if strings.HasPrefix(constraint, "<") {
 		constraintVersion := strings.TrimPrefix(constraint, "<")
-		// Simple string comparison (this should be replaced with proper semver comparison)
-		return version < constraintVersion
+		parsedVersion, err := semver.ParseSemver(version)
+		if err != nil {
+			return true // Assume affected if version can't be parsed
+		}
+		parsedConstraint, err := semver.ParseSemver(constraintVersion)
+		if err != nil {
+			return false
+		}
+		return parsedVersion.LT(parsedConstraint, true)
 	}
 
 	return false
