@@ -2,6 +2,7 @@ package osv
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 
 	knowledge_db "github.com/CodeClarityCE/utility-types/knowledge_db"
@@ -22,14 +23,18 @@ func GetAllOSVReportsForPurl(purl string, knowledge *bun.DB) ([]knowledge_db.OSV
 
 	ctx := context.Background()
 
-	// Query standard OSV table
-	// TODO avoid SQL injection
-	// ("@purl IN osv_report.affected[*].package.purl")
+	// Query standard OSV table using parameterized JSONB containment query
+	containmentValue, err := json.Marshal([]map[string]map[string]string{{"package": {"purl": purl}}})
+	if err != nil {
+		log.Printf("Error marshaling OSV containment value: %v", err)
+		return matches, err
+	}
+
 	rows, err := knowledge.QueryContext(ctx, `
 		SELECT DISTINCT "id", "osv_id", "schema_version", "modified", "published", "withdrawn", "aliases", "related", "summary", "details", "severity", "affected", "references", "credits", "database_specific", "cwes", "cve", vlai_score, vlai_confidence
 		FROM osv
-		WHERE ("affected" @> '[{"package": {"purl": "`+purl+`"}}]')
-	`)
+		WHERE ("affected" @> ?::jsonb)
+	`, string(containmentValue))
 	if err != nil {
 		log.Printf("Error querying OSV table: %v", err)
 		return matches, err
