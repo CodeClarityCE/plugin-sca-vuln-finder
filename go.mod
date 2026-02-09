@@ -1,15 +1,15 @@
 module github.com/CodeClarityCE/plugin-sca-vuln-finder
 
-go 1.24.3
+go 1.25.7
 
 require (
-	github.com/CodeClarityCE/plugin-sbom-javascript v0.0.24-alpha
-	github.com/CodeClarityCE/service-knowledge v0.0.23-alpha
-	github.com/CodeClarityCE/utility-amqp-helper v0.0.11-alpha
-	github.com/CodeClarityCE/utility-boilerplates v0.0.5-alpha
-	github.com/CodeClarityCE/utility-dbhelper v0.0.13-alpha
-	github.com/CodeClarityCE/utility-node-semver v0.0.7-alpha
-	github.com/CodeClarityCE/utility-types v0.0.18-alpha
+	github.com/CodeClarityCE/plugin-sbom-javascript v0.0.25-alpha
+	github.com/CodeClarityCE/service-knowledge v0.0.24-alpha
+	github.com/CodeClarityCE/utility-amqp-helper v0.0.12-alpha
+	github.com/CodeClarityCE/utility-boilerplates v0.0.6-alpha
+	github.com/CodeClarityCE/utility-dbhelper v0.0.14-alpha
+	github.com/CodeClarityCE/utility-node-semver v0.0.8-alpha
+	github.com/CodeClarityCE/utility-types v0.0.19-alpha
 	github.com/google/uuid v1.6.0
 	github.com/package-url/packageurl-go v0.1.3
 	github.com/pandatix/go-cvss v0.6.2
@@ -44,7 +44,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.40.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	golang.org/x/crypto v0.47.0 // indirect
-	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/term v0.39.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
