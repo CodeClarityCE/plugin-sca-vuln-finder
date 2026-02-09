@@ -22,26 +22,11 @@ func NewPHPExtensionAnalyzer() *PHPExtensionAnalyzer {
 	}
 }
 
-// ExtractExtensionsFromSBOM extracts PHP extension information from the SBOM
+// ExtractExtensionsFromSBOM extracts PHP extension information from the SBOM.
+// TODO: Implement actual extraction from SBOM extra field when PHP SBOM provides extension data.
+// Until then, returns an empty map to avoid false positives from hardcoded placeholder versions.
 func (analyzer *PHPExtensionAnalyzer) ExtractExtensionsFromSBOM(sbom sbomTypes.Output) map[string]string {
-	// For now, return a placeholder set of common PHP extensions
-	// TODO: Extract from SBOM extra field when PHP SBOM is properly integrated
-	log.Printf("Note: Using placeholder PHP extensions for vulnerability analysis")
-
-	// Placeholder common PHP extensions that might be present
-	placeholderExtensions := map[string]string{
-		"curl":     "7.68.0",
-		"json":     "1.6.0",
-		"openssl":  "1.1.1",
-		"mbstring": "7.4.0",
-		"xml":      "7.4.0",
-		"mysqli":   "7.4.0",
-		"pdo":      "7.4.0",
-		"zip":      "1.15.0",
-		"gd":       "2.1.0",
-	}
-
-	return placeholderExtensions
+	return map[string]string{}
 }
 
 // AnalyzeExtensionVulnerabilities analyzes extensions for vulnerabilities

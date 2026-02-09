@@ -5,6 +5,7 @@ type ResolveWinner string
 const (
 	NVD  ResolveWinner = "NVD"
 	OSV  ResolveWinner = "OSV"
+	GCVE ResolveWinner = "GCVE"
 	NONE ResolveWinner = "NONE"
 )
 

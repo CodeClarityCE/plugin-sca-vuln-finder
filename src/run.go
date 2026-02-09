@@ -4,6 +4,7 @@ package vulnerabilities
 
 import (
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"slices"
@@ -28,6 +29,26 @@ import (
 	matcher "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/vulnerabilityMatcher"
 )
 
+var sightingHTTPClient = &http.Client{Timeout: 10 * time.Second}
+
+// declareSightings checks if a project URL is publicly accessible and, if so,
+// reports vulnerability sightings to vulnerability-lookup.
+func declareSightings(projectURL string, vulns []vulnerabilityFinder.Vulnerability) {
+	resp, err := sightingHTTPClient.Get(projectURL)
+	if err != nil {
+		log.Printf("Failed to check project URL accessibility: %v", err)
+		return
+	}
+	body, err := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil || resp.StatusCode == 403 || strings.Contains(string(body), "Page not found") {
+		return
+	}
+	for _, vuln := range vulns {
+		vulnerabilitylookup.DeclareSighting(vuln, projectURL)
+	}
+}
+
 // Start starts a vulnerability analysis on the given sbom
 func Start(projectURL string, sbom sbomTypes.Output, languageId string, start time.Time, knowledge *bun.DB) vulnerabilityFinder.Output {
 	if sbom.AnalysisInfo.Status != codeclarity.SUCCESS {
@@ -37,19 +58,20 @@ func Start(projectURL string, sbom sbomTypes.Output, languageId string, start ti
 
 	var vulnerabilityMatcher matcher.VulnerabilityMatcher
 
-	if languageId == "JS" {
+	switch languageId {
+	case "JS":
 		vulnerabilityMatcher = matcher.VulnerabilityMatcher{
 			Ecosystems:        []ecosystemTypes.Ecosystem{ecosystemTypes.NODEJS_OR_JS},
-			ConflictResolver:  conflictResolver.TrustOSV,
+			ConflictResolver:  conflictResolver.TrustOSVFirst,
 			PackageRepository: npmRepository.NpmPackageRepository,
 		}
-	} else if languageId == "PHP" {
+	case "PHP":
 		vulnerabilityMatcher = matcher.VulnerabilityMatcher{
 			Ecosystems:        []ecosystemTypes.Ecosystem{ecosystemTypes.PHP},
-			ConflictResolver:  conflictResolver.TrustOSV,
+			ConflictResolver:  conflictResolver.TrustOSVFirst,
 			PackageRepository: phpRepository.PhpPackageRepository,
 		}
-	} else {
+	default:
 		exceptionManager.AddError("", exceptionManager.UNSUPPORTED_LANGUAGE_REQUESTED, "", exceptionManager.UNSUPPORTED_LANGUAGE_REQUESTED)
 		return outputGenerator.FailureOutput(sbom.AnalysisInfo, start)
 	}
@@ -109,22 +131,7 @@ func Start(projectURL string, sbom sbomTypes.Output, languageId string, start ti
 
 		user := os.Getenv("VULNERABILITY_LOOKUP_API_KEY")
 		if user != "" && user != "!ChangeMe!" {
-			// If the repository is public, we declare sightings to vulnerability lookup
-			// Send a http GET request on projectURL
-			resp, err := http.Get(projectURL)
-			if err != nil || resp.StatusCode == 403 {
-				continue
-			}
-			defer resp.Body.Close()
-			// Process the response body
-			body, err := io.ReadAll(resp.Body)
-			if err != nil || strings.Contains(string(body), "Page not found") {
-				continue
-			}
-			for _, vuln := range vulns {
-				vulnerabilitylookup.DeclareSighting(vuln, projectURL)
-			}
-
+			declareSightings(projectURL, vulns)
 		}
 	}
 
