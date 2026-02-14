@@ -14,7 +14,6 @@ import (
 	"github.com/CodeClarityCE/plugin-sca-vuln-finder/src/conflictResolver"
 	ecosystemTypes "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/ecosystemAnalyzer/types"
 	extensionAnalyzer "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/extensionAnalyzer"
-	frameworkAnalyzer "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/frameworkAnalyzer"
 	outputGenerator "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/outputGenerator"
 	privatePackageAnalyzer "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/privatePackageAnalyzer"
 	npmRepository "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/repository/npm"
@@ -104,18 +103,6 @@ func Start(projectURL string, sbom sbomTypes.Output, languageId string, start ti
 
 			// Merge extension vulnerabilities with package vulnerabilities
 			vulns = append(vulns, extensionVulns...)
-
-			// Also analyze PHP framework-specific vulnerabilities with real database queries
-			frameworkAnalyzer := frameworkAnalyzer.NewPHPFrameworkAnalyzer()
-
-			// Extract framework information from SBOM
-			frameworks := frameworkAnalyzer.ExtractFrameworkFromSBOM(sbom)
-
-			// Analyze framework-specific vulnerabilities using real OSV/NVD/FriendsOfPHP queries
-			frameworkVulns := frameworkAnalyzer.AnalyzeFrameworkVulnerabilities(frameworks, knowledge)
-
-			// Merge framework vulnerabilities with existing vulnerabilities
-			vulns = append(vulns, frameworkVulns...)
 		}
 
 		// Analyze private packages for vulnerabilities (for both JS and PHP)
