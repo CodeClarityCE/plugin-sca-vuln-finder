@@ -22,8 +22,21 @@ func setupTestEnvironment(t *testing.T) (*boilerplates.PluginBase, func()) {
 	os.Setenv("PG_DB_PASSWORD", "!ChangeMe!")
 	os.Setenv("NPM_URL", "https://replicate.npmjs.com/")
 
+	// Change to plugin root so CreatePluginBase can find config.json
+	origDir, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Failed to get working directory: %v", err)
+	}
+	if err := os.Chdir(".."); err != nil {
+		t.Fatalf("Failed to chdir to plugin root: %v", err)
+	}
+
 	// Create PluginBase for testing
 	pluginBase, err := boilerplates.CreatePluginBase()
+
+	// Restore working directory for relative paths in tests
+	os.Chdir(origDir)
+
 	if err != nil {
 		t.Skipf("Skipping test due to database connection error: %v", err)
 		return nil, func() {}
