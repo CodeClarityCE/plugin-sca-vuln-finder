@@ -1,6 +1,6 @@
 module github.com/CodeClarityCE/plugin-sca-vuln-finder
 
-go 1.25.7
+go 1.26.0
 
 require (
 	github.com/CodeClarityCE/plugin-sbom-javascript v0.0.25-alpha
