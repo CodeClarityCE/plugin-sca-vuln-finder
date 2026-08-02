@@ -184,6 +184,14 @@ type GCVEVulnerability struct {
 	SeverityType                SeverityType
 }
 
+// EPSS is a plugin-local copy of the knowledge DB exploit-prediction row: the
+// shared knowledge.EPSS struct tags Score/Percentile with lowercase JSON keys,
+// while the plugin output must expose them as "Score"/"Percentile".
+type EPSS struct {
+	Score      float32
+	Percentile float32
+}
+
 type Vulnerability struct {
 	Sources            []VulnerabilitySource
 	AffectedDependency string
@@ -193,6 +201,7 @@ type Vulnerability struct {
 	NVDMatch           *NVDVulnerability  `json:"NVDMatch,omitempty"`
 	GCVEMatch          *GCVEVulnerability `json:"GCVEMatch,omitempty"`
 	Severity           VulnerabilityMatchSeverity
+	EPSS               *EPSS `json:"EPSS,omitempty"`
 	Weaknesses         []VulnerabilityMatchWeakness
 	Conflict           Conflict
 	// Extension-related fields for PHP extension vulnerabilities
