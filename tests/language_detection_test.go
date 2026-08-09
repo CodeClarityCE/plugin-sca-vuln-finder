@@ -33,7 +33,7 @@ func TestLanguageDetection(t *testing.T) {
 			return
 		}
 
-		out := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge)
+		out := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge, nil)
 
 		assert.NotNil(t, out)
 		assert.Equal(t, codeclarity.SUCCESS, out.AnalysisInfo.Status)
@@ -47,7 +47,7 @@ func TestLanguageDetection(t *testing.T) {
 			return
 		}
 
-		out := vulnerabilities.Start("", sbom, "PHP", time.Now(), pluginBase.DB.Knowledge)
+		out := vulnerabilities.Start("", sbom, "PHP", time.Now(), pluginBase.DB.Knowledge, nil)
 
 		assert.NotNil(t, out)
 		assert.Equal(t, codeclarity.SUCCESS, out.AnalysisInfo.Status)
@@ -67,7 +67,7 @@ func TestLanguageDetection(t *testing.T) {
 			return
 		}
 
-		out := vulnerabilities.Start("", sbom, "PYTHON", time.Now(), pluginBase.DB.Knowledge)
+		out := vulnerabilities.Start("", sbom, "PYTHON", time.Now(), pluginBase.DB.Knowledge, nil)
 
 		assert.NotNil(t, out)
 		assert.Equal(t, codeclarity.FAILURE, out.AnalysisInfo.Status)

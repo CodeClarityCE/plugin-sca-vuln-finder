@@ -97,7 +97,7 @@ func TestE2E_PHPVulnerabilityPipeline(t *testing.T) {
 
 	// Test the complete vulnerability analysis pipeline
 	start := time.Now()
-	output := vulnerabilities.Start("https://github.com/test/php-project", mockSBOM, "PHP", start, nil)
+	output := vulnerabilities.Start("https://github.com/test/php-project", mockSBOM, "PHP", start, nil, nil)
 
 	// Verify output structure
 	assert.NotNil(t, output, "Should return vulnerability output")
@@ -130,7 +130,7 @@ func TestE2E_JavaScriptPHPMixedProject(t *testing.T) {
 
 	// Test JavaScript analysis
 	start := time.Now()
-	jsOutput := vulnerabilities.Start("https://github.com/test/js-project", mockJSSBOM, "JS", start, nil)
+	jsOutput := vulnerabilities.Start("https://github.com/test/js-project", mockJSSBOM, "JS", start, nil, nil)
 
 	assert.NotNil(t, jsOutput, "Should handle JS analysis")
 	assert.Equal(t, codeclarity.SUCCESS, jsOutput.AnalysisInfo.Status, "JS analysis should succeed")
@@ -144,7 +144,7 @@ func TestE2E_JavaScriptPHPMixedProject(t *testing.T) {
 	// Test PHP analysis
 	mockPHPSBOM := createMockPHPSBOM()
 	start = time.Now()
-	phpOutput := vulnerabilities.Start("https://github.com/test/php-project", mockPHPSBOM, "PHP", start, nil)
+	phpOutput := vulnerabilities.Start("https://github.com/test/php-project", mockPHPSBOM, "PHP", start, nil, nil)
 
 	assert.NotNil(t, phpOutput, "Should handle PHP analysis")
 	assert.Equal(t, codeclarity.SUCCESS, phpOutput.AnalysisInfo.Status, "PHP analysis should succeed")
@@ -160,7 +160,7 @@ func TestE2E_PHPVulnerabilityFields(t *testing.T) {
 	mockSBOM := createMockPHPSBOMWithVulnerabilities()
 
 	start := time.Now()
-	output := vulnerabilities.Start("https://github.com/test/php-project", mockSBOM, "PHP", start, nil)
+	output := vulnerabilities.Start("https://github.com/test/php-project", mockSBOM, "PHP", start, nil, nil)
 
 	assert.NotNil(t, output, "Should return output")
 

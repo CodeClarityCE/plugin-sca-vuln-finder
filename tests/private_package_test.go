@@ -16,7 +16,7 @@ func TestPrivatePackageVulnerabilityDetection(t *testing.T) {
 	sbom := createMockSBOMWithPrivatePackages()
 
 	// Run vulnerability analysis
-	output := vulnerabilities.Start("https://github.com/test/project", sbom, "PHP", time.Now(), nil)
+	output := vulnerabilities.Start("https://github.com/test/project", sbom, "PHP", time.Now(), nil, nil)
 
 	// Validate that vulnerabilities were found
 	if output.AnalysisInfo.Status != codeclarity.SUCCESS {
@@ -50,7 +50,7 @@ func TestPrivatePackagePatternDetection(t *testing.T) {
 	sbom := createMockSBOMWithProblematicPackages()
 
 	// Run vulnerability analysis
-	output := vulnerabilities.Start("https://github.com/test/project", sbom, "PHP", time.Now(), nil)
+	output := vulnerabilities.Start("https://github.com/test/project", sbom, "PHP", time.Now(), nil, nil)
 
 	// Look for specific pattern-based vulnerabilities
 	expectedPatterns := []string{

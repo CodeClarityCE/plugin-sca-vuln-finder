@@ -4,11 +4,27 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"time"
 
+	"github.com/CodeClarityCE/plugin-sca-vuln-finder/src/repository"
 	knowledge_db "github.com/CodeClarityCE/utility-types/knowledge_db"
 	"github.com/package-url/packageurl-go"
 	"github.com/uptrace/bun"
 )
+
+// FilterPublishedOnOrBefore drops OSV reports whose Published timestamp falls
+// after the end of the asof day (the whole asof day stays in range). Reports
+// with an empty or unparseable Published timestamp are kept, matching the
+// semantics of the knowledge osv_asof mirror.
+func FilterPublishedOnOrBefore(reports []knowledge_db.OSVItem, asof time.Time) []knowledge_db.OSVItem {
+	kept := make([]knowledge_db.OSVItem, 0, len(reports))
+	for _, report := range reports {
+		if repository.KeepPublishedOnOrBefore(report.Published, asof) {
+			kept = append(kept, report)
+		}
+	}
+	return kept
+}
 
 // GetAllOSVReportsForPurl retrieves all OSV reports for a given package URL (purl).
 // It queries both the standard OSV table and the FriendsOfPHP table for PHP packages.

@@ -23,7 +23,7 @@ func TestIntegration_CompletePHPPipeline(t *testing.T) {
 
 	// Step 2: Run vulnerability analysis on the SBOM
 	start := time.Now()
-	vulnOutput := vulnerabilities.Start("https://github.com/test/php-project", sbomOutput, "PHP", start, nil)
+	vulnOutput := vulnerabilities.Start("https://github.com/test/php-project", sbomOutput, "PHP", start, nil, nil)
 
 	// Verify vulnerability analysis succeeded
 	assert.NotNil(t, vulnOutput, "Vulnerability analysis should succeed")
@@ -82,7 +82,7 @@ func TestIntegration_PHPExtensionDetectionFlow(t *testing.T) {
 	assert.NotNil(t, sbomOutput, "SBOM should be created")
 
 	// Test vulnerability analysis includes extension analysis
-	vulnOutput := vulnerabilities.Start("https://github.com/test/php-ext-project", sbomOutput, "PHP", time.Now(), nil)
+	vulnOutput := vulnerabilities.Start("https://github.com/test/php-ext-project", sbomOutput, "PHP", time.Now(), nil, nil)
 
 	assert.Equal(t, codeclarity.SUCCESS, vulnOutput.AnalysisInfo.Status)
 
@@ -119,7 +119,7 @@ func TestIntegration_ErrorPropagation(t *testing.T) {
 	assert.NotEmpty(t, sbomOutput.AnalysisInfo.Errors, "Should have error messages")
 
 	// Test vulnerability analysis with failed SBOM
-	vulnOutput := vulnerabilities.Start("https://github.com/test/failed-project", sbomOutput, "PHP", time.Now(), nil)
+	vulnOutput := vulnerabilities.Start("https://github.com/test/failed-project", sbomOutput, "PHP", time.Now(), nil, nil)
 
 	assert.NotNil(t, vulnOutput)
 	assert.Equal(t, codeclarity.FAILURE, vulnOutput.AnalysisInfo.Status, "Should propagate SBOM failure")
@@ -134,7 +134,7 @@ func TestIntegration_PerformanceCharacteristics(t *testing.T) {
 
 	// Measure vulnerability analysis time
 	vulnStart := time.Now()
-	vulnOutput := vulnerabilities.Start("https://github.com/test/perf-project", sbomOutput, "PHP", vulnStart, nil)
+	vulnOutput := vulnerabilities.Start("https://github.com/test/perf-project", sbomOutput, "PHP", vulnStart, nil, nil)
 	vulnDuration := time.Since(vulnStart)
 
 	assert.Equal(t, codeclarity.SUCCESS, vulnOutput.AnalysisInfo.Status)
