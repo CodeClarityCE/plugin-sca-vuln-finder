@@ -1,6 +1,7 @@
 package main
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -28,13 +29,10 @@ func TestPrivatePackageVulnerabilityDetection(t *testing.T) {
 	for _, workspace := range output.WorkSpaces {
 		for _, vuln := range workspace.Vulnerabilities {
 			// Check if any vulnerabilities come from private analysis
-			for _, source := range vuln.Sources {
-				if source == vulnerabilityFinderTypes.PRIVATE_ANALYSIS {
-					foundPrivateVulns = true
-					t.Logf("Found private package vulnerability: %s for package %s",
-						vuln.VulnerabilityId, vuln.AffectedDependency)
-					break
-				}
+			if slices.Contains(vuln.Sources, vulnerabilityFinderTypes.PRIVATE_ANALYSIS) {
+				foundPrivateVulns = true
+				t.Logf("Found private package vulnerability: %s for package %s",
+					vuln.VulnerabilityId, vuln.AffectedDependency)
 			}
 		}
 	}

@@ -452,8 +452,8 @@ func (analyzer *PHPFrameworkAnalyzer) isVersionAffected(version, constraint stri
 		return true // Assume affected if version is unknown
 	}
 
-	if strings.HasPrefix(constraint, "<") {
-		constraintVersion := strings.TrimPrefix(constraint, "<")
+	if after, ok := strings.CutPrefix(constraint, "<"); ok {
+		constraintVersion := after
 		parsedVersion, err := semver.ParseSemver(version)
 		if err != nil {
 			return true // Assume affected if version can't be parsed

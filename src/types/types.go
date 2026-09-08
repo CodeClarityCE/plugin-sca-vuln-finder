@@ -233,8 +233,8 @@ type Pairs struct {
 	ConflictFlag   conflict.ConflictFlag
 }
 
-func ConvertOutputToMap(output Output) map[string]interface{} {
-	result := make(map[string]interface{})
+func ConvertOutputToMap(output Output) map[string]any {
+	result := make(map[string]any)
 	result["workspaces"] = output.WorkSpaces
 	result["analysis_info"] = output.AnalysisInfo
 	return result

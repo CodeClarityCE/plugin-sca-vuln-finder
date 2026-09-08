@@ -160,7 +160,7 @@ func convertFriendsOfPHPToOSV(advisory knowledge_db.FriendsOfPHPAdvisory) knowle
 		Modified:   advisory.Modified,
 		References: references,
 		Affected:   affected,
-		DatabaseSpecific: map[string]interface{}{
+		DatabaseSpecific: map[string]any{
 			"source":      "FriendsOfPHP",
 			"advisory_id": advisory.AdvisoryId,
 		},
