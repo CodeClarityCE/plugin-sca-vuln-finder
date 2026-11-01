@@ -22,11 +22,11 @@ type PrivateRepositoryInfo struct {
 
 // PrivateRepository represents a private repository configuration
 type PrivateRepository struct {
-	Type    string                 `json:"type"`
-	URL     string                 `json:"url"`
-	Options map[string]interface{} `json:"options,omitempty"`
-	Only    []string               `json:"only,omitempty"`
-	Exclude []string               `json:"exclude,omitempty"`
+	Type    string         `json:"type"`
+	URL     string         `json:"url"`
+	Options map[string]any `json:"options,omitempty"`
+	Only    []string       `json:"only,omitempty"`
+	Exclude []string       `json:"exclude,omitempty"`
 }
 
 // PrivatePackageAnalyzer analyzes vulnerabilities in private packages
@@ -83,7 +83,7 @@ func (ppa *PrivatePackageAnalyzer) extractPrivateRepositoryInfo(sbom sbomTypes.O
 		return nil
 	}
 
-	var extraMap map[string]interface{}
+	var extraMap map[string]any
 	if err := json.Unmarshal(extraData, &extraMap); err != nil {
 		log.Printf("Failed to unmarshal SBOM extra data: %v", err)
 		return nil
@@ -169,12 +169,12 @@ func (ppa *PrivatePackageAnalyzer) matchesPattern(packageName, pattern string) b
 	}
 
 	if strings.Contains(pattern, "*") {
-		if strings.HasSuffix(pattern, "*") {
-			prefix := strings.TrimSuffix(pattern, "*")
+		if before, ok := strings.CutSuffix(pattern, "*"); ok {
+			prefix := before
 			return strings.HasPrefix(packageName, prefix)
 		}
-		if strings.HasPrefix(pattern, "*") {
-			suffix := strings.TrimPrefix(pattern, "*")
+		if after, ok := strings.CutPrefix(pattern, "*"); ok {
+			suffix := after
 			return strings.HasSuffix(packageName, suffix)
 		}
 		// Middle wildcard - simple implementation

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -16,7 +17,7 @@ func TestPrivatePackageVulnerabilityDetection(t *testing.T) {
 	sbom := createMockSBOMWithPrivatePackages()
 
 	// Run vulnerability analysis
-	output := vulnerabilities.Start("https://github.com/test/project", sbom, "PHP", time.Now(), nil)
+	output := vulnerabilities.Start("https://github.com/test/project", sbom, "PHP", time.Now(), nil, nil)
 
 	// Validate that vulnerabilities were found
 	if output.AnalysisInfo.Status != codeclarity.SUCCESS {
@@ -28,13 +29,10 @@ func TestPrivatePackageVulnerabilityDetection(t *testing.T) {
 	for _, workspace := range output.WorkSpaces {
 		for _, vuln := range workspace.Vulnerabilities {
 			// Check if any vulnerabilities come from private analysis
-			for _, source := range vuln.Sources {
-				if source == vulnerabilityFinderTypes.PRIVATE_ANALYSIS {
-					foundPrivateVulns = true
-					t.Logf("Found private package vulnerability: %s for package %s",
-						vuln.VulnerabilityId, vuln.AffectedDependency)
-					break
-				}
+			if slices.Contains(vuln.Sources, vulnerabilityFinderTypes.PRIVATE_ANALYSIS) {
+				foundPrivateVulns = true
+				t.Logf("Found private package vulnerability: %s for package %s",
+					vuln.VulnerabilityId, vuln.AffectedDependency)
 			}
 		}
 	}
@@ -50,7 +48,7 @@ func TestPrivatePackagePatternDetection(t *testing.T) {
 	sbom := createMockSBOMWithProblematicPackages()
 
 	// Run vulnerability analysis
-	output := vulnerabilities.Start("https://github.com/test/project", sbom, "PHP", time.Now(), nil)
+	output := vulnerabilities.Start("https://github.com/test/project", sbom, "PHP", time.Now(), nil, nil)
 
 	// Look for specific pattern-based vulnerabilities
 	expectedPatterns := []string{

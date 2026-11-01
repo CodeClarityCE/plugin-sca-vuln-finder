@@ -51,6 +51,30 @@ func main() {
 }
 
 func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage types_amqp.DispatcherPluginMessage, config plugin.Plugin, analysis_document codeclarity.Analysis) (map[string]any, codeclarity.AnalysisStatus, error) {
+	// Read the optional per-analysis knowledge as-of cutoff (YYYY-MM-DD).
+	// A missing config map, missing key, or empty string means no filter; a
+	// present but invalid value fails the analysis, because a typo silently
+	// producing unfiltered results would corrupt the study.
+	var knowledgeAsOf *time.Time
+	knowledgeAsOfStr := ""
+	if pluginConfig, ok := analysis_document.Config[config.Name].(map[string]any); ok {
+		if raw, present := pluginConfig["knowledge_asof"]; present && raw != nil {
+			str, ok := raw.(string)
+			if !ok {
+				return nil, codeclarity.FAILURE, fmt.Errorf("invalid knowledge_asof config value %v: expected a YYYY-MM-DD string", raw)
+			}
+			if str != "" {
+				parsed, err := time.Parse("2006-01-02", str)
+				if err != nil {
+					return nil, codeclarity.FAILURE, fmt.Errorf("invalid knowledge_asof date %q (expected YYYY-MM-DD): %w", str, err)
+				}
+				knowledgeAsOf = &parsed
+				knowledgeAsOfStr = str
+				log.Printf("Knowledge as-of filter active: %s", knowledgeAsOfStr)
+			}
+		}
+	}
+
 	// Prepare the arguments for the plugin
 	// Get all SBOM keys from previous stages
 	sbomKeys := []struct {
@@ -180,7 +204,7 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 			}
 			log.Printf("Total packages across all workspaces: %d", totalPackages)
 
-			langOutput := vulnerabilities.Start(project.Url, sbomOutput, sbomInfo.language, start, databases.Knowledge)
+			langOutput := vulnerabilities.Start(project.Url, sbomOutput, sbomInfo.language, start, databases.Knowledge, knowledgeAsOf)
 
 			if langOutput.AnalysisInfo.Status == codeclarity.SUCCESS {
 				anySuccess = true
@@ -240,6 +264,9 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 	// Prepare the result to store in step
 	result := make(map[string]any)
 	result["vulnKey"] = vuln_result.Id
+	if knowledgeAsOf != nil {
+		result["knowledgeAsOf"] = knowledgeAsOfStr
+	}
 
 	// Build vuln summary for notifier
 	if vulnOutput.AnalysisInfo.Status == codeclarity.SUCCESS {

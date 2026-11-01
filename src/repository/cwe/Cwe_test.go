@@ -2,6 +2,7 @@ package cwe
 
 import (
 	"database/sql"
+	"os"
 	"testing"
 
 	dbhelper "github.com/CodeClarityCE/utility-dbhelper/helper"
@@ -12,7 +13,24 @@ import (
 )
 
 func TestGetCWE(t *testing.T) {
-	dsn_knowledge := "postgres://postgres:!ChangeMe!@127.0.0.1:5432/" + dbhelper.Config.Database.Knowledge + "?sslmode=disable"
+	host := os.Getenv("PG_DB_HOST")
+	if host == "" {
+		host = "127.0.0.1"
+	}
+	port := os.Getenv("PG_DB_PORT")
+	if port == "" {
+		port = "5432"
+	}
+	user := os.Getenv("PG_DB_USER")
+	if user == "" {
+		user = "postgres"
+	}
+	password := os.Getenv("PG_DB_PASSWORD")
+	if password == "" {
+		t.Skip("PG_DB_PASSWORD not set, skipping")
+	}
+
+	dsn_knowledge := dbhelper.BuildDSN(user, password, host, port, dbhelper.Config.Database.Knowledge)
 	sqldb_knowledge := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn_knowledge)))
 	db_knowledge := bun.NewDB(sqldb_knowledge, pgdialect.New())
 	defer db_knowledge.Close()

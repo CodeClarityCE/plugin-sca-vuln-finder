@@ -200,12 +200,3 @@ func sortSemvers(versions []string) []string {
 	sort.Sort(semverCompVers(versions))
 	return versions
 }
-
-// min returns the minimum of two integers.
-// It takes two integers, a and b, as input and returns the smaller of the two.
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}

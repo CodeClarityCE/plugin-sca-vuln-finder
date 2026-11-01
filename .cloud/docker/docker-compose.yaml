@@ -8,6 +8,8 @@ services:
         - PLUGINNAME=vuln-finder
     image: codeclarityce/vuln-finder-dev:latest
     restart: always
+    deploy:
+      replicas: 4
     volumes:
       - ../../backend:/codeclarity
     depends_on:

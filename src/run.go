@@ -48,8 +48,10 @@ func declareSightings(projectURL string, vulns []vulnerabilityFinder.Vulnerabili
 	}
 }
 
-// Start starts a vulnerability analysis on the given sbom
-func Start(projectURL string, sbom sbomTypes.Output, languageId string, start time.Time, knowledge *bun.DB) vulnerabilityFinder.Output {
+// Start starts a vulnerability analysis on the given sbom. knowledgeAsOf, when
+// non-nil, drops OSV advisories published after that day (the whole day stays
+// in range) before matching.
+func Start(projectURL string, sbom sbomTypes.Output, languageId string, start time.Time, knowledge *bun.DB, knowledgeAsOf *time.Time) vulnerabilityFinder.Output {
 	if sbom.AnalysisInfo.Status != codeclarity.SUCCESS {
 		exceptionManager.AddError("Execution of the previous stage was unsuccessful, upon which the current stage relies", exceptionManager.PREVIOUS_STAGE_FAILED, "Execution of the previous stage was unsuccessful, upon which the current stage relies", exceptionManager.PREVIOUS_STAGE_FAILED)
 		return outputGenerator.FailureOutput(sbom.AnalysisInfo, start)
@@ -63,12 +65,14 @@ func Start(projectURL string, sbom sbomTypes.Output, languageId string, start ti
 			Ecosystems:        []ecosystemTypes.Ecosystem{ecosystemTypes.NODEJS_OR_JS},
 			ConflictResolver:  conflictResolver.TrustOSVFirst,
 			PackageRepository: npmRepository.NpmPackageRepository,
+			KnowledgeAsOf:     knowledgeAsOf,
 		}
 	case "PHP":
 		vulnerabilityMatcher = matcher.VulnerabilityMatcher{
 			Ecosystems:        []ecosystemTypes.Ecosystem{ecosystemTypes.PHP},
 			ConflictResolver:  conflictResolver.TrustOSVFirst,
 			PackageRepository: phpRepository.PhpPackageRepository,
+			KnowledgeAsOf:     knowledgeAsOf,
 		}
 	default:
 		exceptionManager.AddError("", exceptionManager.UNSUPPORTED_LANGUAGE_REQUESTED, "", exceptionManager.UNSUPPORTED_LANGUAGE_REQUESTED)
