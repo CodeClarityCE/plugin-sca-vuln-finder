@@ -17,24 +17,25 @@ func TestE2E_PHPExtensionAnalyzer(t *testing.T) {
 	analyzer := extensionAnalyzer.NewPHPExtensionAnalyzer()
 	assert.NotNil(t, analyzer, "Should create PHP extension analyzer")
 
-	// Create a mock SBOM for testing
+	// The PHP SBOM carries no extension data yet, so extraction must not invent
+	// any: the hardcoded placeholder versions it used to return caused false
+	// positives.
 	mockSBOM := createMockPHPSBOM()
+	assert.Empty(t, analyzer.ExtractExtensionsFromSBOM(mockSBOM),
+		"Should not report extensions the SBOM does not contain")
 
-	// Test extension extraction
-	extensions := analyzer.ExtractExtensionsFromSBOM(mockSBOM)
-	assert.NotEmpty(t, extensions, "Should extract PHP extensions from SBOM")
-	assert.Greater(t, len(extensions), 5, "Should extract multiple common extensions")
-
-	// Verify expected extensions are present
-	expectedExtensions := []string{"curl", "json", "openssl", "mbstring", "xml", "mysqli", "pdo", "zip", "gd"}
-	foundExtensions := 0
-	for _, extName := range expectedExtensions {
-		if version, exists := extensions[extName]; exists {
-			foundExtensions++
-			assert.NotEmpty(t, version, "Extension %s should have version", extName)
-		}
+	// Filtering and analysis work on whatever extensions are known.
+	extensions := map[string]string{
+		"curl":     "7.68.0",
+		"json":     "1.6.0",
+		"openssl":  "1.1.1",
+		"mbstring": "7.4.0",
+		"xml":      "7.4.0",
+		"mysqli":   "7.4.0",
+		"pdo":      "7.4.0",
+		"zip":      "1.15.0",
+		"gd":       "2.1.0",
 	}
-	assert.Greater(t, foundExtensions, 6, "Should find at least 7 expected extensions")
 
 	// Test filtering of relevant extensions
 	relevantExtensions := analyzer.FilterRelevantExtensions(extensions)
