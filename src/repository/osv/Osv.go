@@ -26,6 +26,18 @@ func FilterPublishedOnOrBefore(reports []knowledge_db.OSVItem, asof time.Time) [
 	return kept
 }
 
+// FilterWithdrawn drops withdrawn advisories. With an as-of date, an advisory
+// withdrawn after that date is kept, since it was still active then.
+func FilterWithdrawn(reports []knowledge_db.OSVItem, asof *time.Time) []knowledge_db.OSVItem {
+	kept := make([]knowledge_db.OSVItem, 0, len(reports))
+	for _, report := range reports {
+		if report.Withdrawn == "" || (asof != nil && !repository.KeepPublishedOnOrBefore(report.Withdrawn, *asof)) {
+			kept = append(kept, report)
+		}
+	}
+	return kept
+}
+
 // GetAllOSVReportsForPurl retrieves all OSV reports for a given package URL (purl).
 // It queries both the standard OSV table and the FriendsOfPHP table for PHP packages.
 // The function returns a slice of OSVItem, which represents the OSV reports, and an error if any.
