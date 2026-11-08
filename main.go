@@ -21,6 +21,13 @@ import (
 	"github.com/google/uuid"
 )
 
+// sbomKey identifies one SBOM result to process.
+type sbomKey struct {
+	id         uuid.UUID
+	language   string
+	pluginName string
+}
+
 // VulnFinderAnalysisHandler implements the AnalysisHandler interface
 type VulnFinderAnalysisHandler struct{}
 
@@ -77,11 +84,7 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 
 	// Prepare the arguments for the plugin
 	// Get all SBOM keys from previous stages
-	sbomKeys := []struct {
-		id         uuid.UUID
-		language   string
-		pluginName string
-	}{}
+	sbomKeys := []sbomKey{}
 
 	// Look for SBOM results in all completed stages, not just the "previous" stage
 	// This makes vuln-finder more flexible with dispatcher scheduling
@@ -101,36 +104,24 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 				log.Printf("Found completed js-sbom in stage %d", stageIndex)
 				sbomKeyStr, ok := step.Result["sbomKey"].(string)
 				if !ok {
-					log.Printf("Warning: sbomKey not found or not a string in js-sbom result at stage %d", stageIndex)
-					continue
+					return nil, codeclarity.FAILURE, fmt.Errorf("js-sbom result at stage %d has no sbomKey", stageIndex)
 				}
 				sbomKeyUUID, err := uuid.Parse(sbomKeyStr)
 				if err != nil {
-					log.Printf("Warning: failed to parse js-sbom key UUID: %v", err)
-					continue
+					return nil, codeclarity.FAILURE, fmt.Errorf("invalid js-sbom key: %w", err)
 				}
-				sbomKeys = append(sbomKeys, struct {
-					id         uuid.UUID
-					language   string
-					pluginName string
-				}{sbomKeyUUID, "JS", "js-sbom"})
+				sbomKeys = append(sbomKeys, sbomKey{sbomKeyUUID, "JS", "js-sbom"})
 			case "php-sbom":
 				log.Printf("Found completed php-sbom in stage %d", stageIndex)
 				sbomKeyStr, ok := step.Result["sbomKey"].(string)
 				if !ok {
-					log.Printf("Warning: sbomKey not found or not a string in php-sbom result at stage %d", stageIndex)
-					continue
+					return nil, codeclarity.FAILURE, fmt.Errorf("php-sbom result at stage %d has no sbomKey", stageIndex)
 				}
 				sbomKeyUUID, err := uuid.Parse(sbomKeyStr)
 				if err != nil {
-					log.Printf("Warning: failed to parse php-sbom key UUID: %v", err)
-					continue
+					return nil, codeclarity.FAILURE, fmt.Errorf("invalid php-sbom key: %w", err)
 				}
-				sbomKeys = append(sbomKeys, struct {
-					id         uuid.UUID
-					language   string
-					pluginName string
-				}{sbomKeyUUID, "PHP", "php-sbom"})
+				sbomKeys = append(sbomKeys, sbomKey{sbomKeyUUID, "PHP", "php-sbom"})
 			}
 		}
 	}
@@ -162,92 +153,9 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 			Status: codeclarity.SUCCESS,
 		}, start)
 	} else {
-		// Process all available SBOMs and merge results
-		mergedWorkspaces := map[string]vulnerabilityFinder.Workspace{}
-		anySuccess := false
-
-		for _, sbomInfo := range sbomKeys {
-			log.Printf("Processing SBOM: ID=%s, Language=%s, Plugin=%s", sbomInfo.id.String(), sbomInfo.language, sbomInfo.pluginName)
-
-			res := codeclarity.Result{
-				Id: sbomInfo.id,
-			}
-			err = databases.Codeclarity.NewSelect().Model(&res).Where("id = ?", sbomInfo.id).Scan(context.Background())
-			if err != nil {
-				log.Printf("Warning: failed to fetch SBOM result %s: %v, skipping", sbomInfo.id, err)
-				continue
-			}
-
-			sbomOutput := sbom.Output{}
-
-			resultBytes, ok := res.Result.([]byte)
-			if !ok {
-				log.Printf("Warning: SBOM result is not []byte for %s, skipping", sbomInfo.pluginName)
-				continue
-			}
-			err = json.Unmarshal(resultBytes, &sbomOutput)
-			if err != nil {
-				log.Printf("Warning: error reading %s output: %v, skipping", sbomInfo.pluginName, err)
-				exceptionManager.AddError(
-					"", exceptionManager.GENERIC_ERROR,
-					fmt.Sprintf("Error when reading %s output: %s", sbomInfo.pluginName, err), exceptionManager.FAILED_TO_READ_PREVIOUS_STAGE_OUTPUT,
-				)
-				continue
-			}
-
-			// Log SBOM details before vulnerability detection
-			log.Printf("SBOM contains %d workspaces", len(sbomOutput.WorkSpaces))
-			totalPackages := 0
-			for workspace, deps := range sbomOutput.WorkSpaces {
-				log.Printf("Workspace '%s': %d dependencies", workspace, len(deps.Dependencies))
-				totalPackages += len(deps.Dependencies)
-			}
-			log.Printf("Total packages across all workspaces: %d", totalPackages)
-
-			langOutput := vulnerabilities.Start(project.Url, sbomOutput, sbomInfo.language, start, databases.Knowledge, knowledgeAsOf)
-
-			if langOutput.AnalysisInfo.Status == codeclarity.SUCCESS {
-				anySuccess = true
-				// Merge workspaces: append vulnerabilities when workspace keys overlap
-				for wsKey, ws := range langOutput.WorkSpaces {
-					if existing, ok := mergedWorkspaces[wsKey]; ok {
-						existing.Vulnerabilities = append(existing.Vulnerabilities, ws.Vulnerabilities...)
-						mergedWorkspaces[wsKey] = existing
-					} else {
-						mergedWorkspaces[wsKey] = ws
-					}
-				}
-
-				// Log vulnerability detection results for this language
-				totalVulns := 0
-				for wsName, ws := range langOutput.WorkSpaces {
-					vulnCount := len(ws.Vulnerabilities)
-					totalVulns += vulnCount
-					log.Printf("[%s] Workspace '%s': %d vulnerabilities", sbomInfo.language, wsName, vulnCount)
-				}
-				log.Printf("[%s] TOTAL VULNERABILITIES DETECTED: %d", sbomInfo.language, totalVulns)
-			} else {
-				log.Printf("[%s] Vulnerability detection failed with status: %s", sbomInfo.language, langOutput.AnalysisInfo.Status)
-			}
-		}
-
-		if anySuccess {
-			vulnOutput = outputGenerator.SuccessOutput(mergedWorkspaces, sbom.AnalysisInfo{
-				Status: codeclarity.SUCCESS,
-			}, start)
-		} else {
-			vulnOutput = outputGenerator.FailureOutput(sbom.AnalysisInfo{
-				Status: codeclarity.FAILURE,
-			}, start)
-		}
-
-		// Log merged results
-		totalMerged := 0
-		for wsName, ws := range mergedWorkspaces {
-			totalMerged += len(ws.Vulnerabilities)
-			log.Printf("Merged workspace '%s': %d vulnerabilities", wsName, len(ws.Vulnerabilities))
-		}
-		log.Printf("TOTAL MERGED VULNERABILITIES: %d across %d workspaces", totalMerged, len(mergedWorkspaces))
+		vulnOutput = combineVulnOutputs(sbomKeys, func(sbomInfo sbomKey) (vulnerabilityFinder.Output, error) {
+			return analyzeSbom(databases, sbomInfo, project.Url, start, knowledgeAsOf)
+		}, start)
 	}
 
 	vuln_result := codeclarity.Result{
@@ -352,4 +260,88 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 
 	// The output is always a map[string]any
 	return result, vulnOutput.AnalysisInfo.Status, nil
+}
+
+// analyzeSbom loads one stored SBOM and runs vulnerability detection on it.
+func analyzeSbom(databases *boilerplates.PluginDatabases, sbomInfo sbomKey, projectUrl string, start time.Time, knowledgeAsOf *time.Time) (vulnerabilityFinder.Output, error) {
+	log.Printf("Processing SBOM: ID=%s, Language=%s, Plugin=%s", sbomInfo.id.String(), sbomInfo.language, sbomInfo.pluginName)
+
+	res := codeclarity.Result{Id: sbomInfo.id}
+	err := databases.Codeclarity.NewSelect().Model(&res).Where("id = ?", sbomInfo.id).Scan(context.Background())
+	if err != nil {
+		return vulnerabilityFinder.Output{}, fmt.Errorf("fetch SBOM result %s: %w", sbomInfo.id, err)
+	}
+	resultBytes, ok := res.Result.([]byte)
+	if !ok {
+		return vulnerabilityFinder.Output{}, fmt.Errorf("SBOM result of %s is not stored as bytes", sbomInfo.pluginName)
+	}
+
+	sbomOutput := sbom.Output{}
+	if err = json.Unmarshal(resultBytes, &sbomOutput); err != nil {
+		exceptionManager.AddError(
+			"", exceptionManager.GENERIC_ERROR,
+			fmt.Sprintf("Error when reading %s output: %s", sbomInfo.pluginName, err), exceptionManager.FAILED_TO_READ_PREVIOUS_STAGE_OUTPUT,
+		)
+		return vulnerabilityFinder.Output{}, fmt.Errorf("read %s output: %w", sbomInfo.pluginName, err)
+	}
+
+	// Log SBOM details before vulnerability detection
+	log.Printf("SBOM contains %d workspaces", len(sbomOutput.WorkSpaces))
+	totalPackages := 0
+	for workspace, deps := range sbomOutput.WorkSpaces {
+		log.Printf("Workspace '%s': %d dependencies", workspace, len(deps.Dependencies))
+		totalPackages += len(deps.Dependencies)
+	}
+	log.Printf("Total packages across all workspaces: %d", totalPackages)
+
+	return vulnerabilities.Start(projectUrl, sbomOutput, sbomInfo.language, start, databases.Knowledge, knowledgeAsOf), nil
+}
+
+// combineVulnOutputs merges the vulnerability results of every SBOM.
+// One SBOM that cannot be analyzed fails the step, so no ecosystem goes missing.
+func combineVulnOutputs(sbomKeys []sbomKey, analyze func(sbomKey) (vulnerabilityFinder.Output, error), start time.Time) vulnerabilityFinder.Output {
+	failed := func() vulnerabilityFinder.Output {
+		return outputGenerator.FailureOutput(sbom.AnalysisInfo{Status: codeclarity.FAILURE}, start)
+	}
+	mergedWorkspaces := map[string]vulnerabilityFinder.Workspace{}
+
+	for _, sbomInfo := range sbomKeys {
+		langOutput, err := analyze(sbomInfo)
+		if err != nil {
+			log.Printf("Vulnerability detection failed: %v", err)
+			return failed()
+		}
+		if langOutput.AnalysisInfo.Status != codeclarity.SUCCESS {
+			log.Printf("[%s] Vulnerability detection failed with status: %s", sbomInfo.language, langOutput.AnalysisInfo.Status)
+			return failed()
+		}
+
+		// Merge workspaces: append vulnerabilities when workspace keys overlap
+		for wsKey, ws := range langOutput.WorkSpaces {
+			if existing, ok := mergedWorkspaces[wsKey]; ok {
+				existing.Vulnerabilities = append(existing.Vulnerabilities, ws.Vulnerabilities...)
+				mergedWorkspaces[wsKey] = existing
+			} else {
+				mergedWorkspaces[wsKey] = ws
+			}
+		}
+
+		// Log vulnerability detection results for this language
+		totalVulns := 0
+		for wsName, ws := range langOutput.WorkSpaces {
+			vulnCount := len(ws.Vulnerabilities)
+			totalVulns += vulnCount
+			log.Printf("[%s] Workspace '%s': %d vulnerabilities", sbomInfo.language, wsName, vulnCount)
+		}
+		log.Printf("[%s] TOTAL VULNERABILITIES DETECTED: %d", sbomInfo.language, totalVulns)
+	}
+
+	totalMerged := 0
+	for wsName, ws := range mergedWorkspaces {
+		totalMerged += len(ws.Vulnerabilities)
+		log.Printf("Merged workspace '%s': %d vulnerabilities", wsName, len(ws.Vulnerabilities))
+	}
+	log.Printf("TOTAL MERGED VULNERABILITIES: %d across %d workspaces", totalMerged, len(mergedWorkspaces))
+
+	return outputGenerator.SuccessOutput(mergedWorkspaces, sbom.AnalysisInfo{Status: codeclarity.SUCCESS}, start)
 }
