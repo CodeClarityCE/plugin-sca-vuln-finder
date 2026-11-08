@@ -37,7 +37,7 @@ func TestCombineVulnOutputs(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			out := combineVulnOutputs(keys, func(k sbomKey) (vulnerabilityFinder.Output, error) {
+			out, _ := combineVulnOutputs(keys, func(k sbomKey) (vulnerabilityFinder.Output, error) {
 				if k.language == "PHP" {
 					return tc.php(k)
 				}
@@ -45,6 +45,36 @@ func TestCombineVulnOutputs(t *testing.T) {
 			}, time.Now())
 			if out.AnalysisInfo.Status != tc.want || len(out.WorkSpaces) != tc.wantLen {
 				t.Fatalf("status = %s with %d workspaces", out.AnalysisInfo.Status, len(out.WorkSpaces))
+			}
+		})
+	}
+}
+
+func TestCombineVulnOutputsSaysWhichSbomFailed(t *testing.T) {
+	keys := []sbomKey{{uuid.New(), "JS", "js-sbom"}, {uuid.New(), "PHP", "php-sbom"}}
+	cases := []struct {
+		name    string
+		analyze func(sbomKey) (vulnerabilityFinder.Output, error)
+		want    string
+	}{
+		{"cannot be loaded", func(k sbomKey) (vulnerabilityFinder.Output, error) {
+			if k.language == "PHP" {
+				return vulnerabilityFinder.Output{}, errors.New("pq: secret detail at /srv/x")
+			}
+			return vulnOutput(codeclarity.SUCCESS, k.language), nil
+		}, "the PHP dependency list could not be read"},
+		{"cannot be processed", func(k sbomKey) (vulnerabilityFinder.Output, error) {
+			return vulnOutput(codeclarity.FAILURE, k.language), nil
+		}, "the JavaScript dependencies could not be checked for vulnerabilities"},
+		{"every SBOM succeeds", func(k sbomKey) (vulnerabilityFinder.Output, error) {
+			return vulnOutput(codeclarity.SUCCESS, k.language), nil
+		}, ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, reason := combineVulnOutputs(keys, tc.analyze, time.Now())
+			if reason != tc.want {
+				t.Fatalf("reason = %q, want %q", reason, tc.want)
 			}
 		})
 	}
