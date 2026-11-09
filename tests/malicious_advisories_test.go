@@ -43,7 +43,9 @@ INSERT INTO osv (osv_id, kind, summary, affected, aliases) VALUES
 	('MAL-2024-1', 'malicious', 'Malicious code in evil-pkg',
 	 '[{"package":{"ecosystem":"npm","name":"evil-pkg","purl":"pkg:npm/evil-pkg"},"ranges":[{"type":"SEMVER","events":[{"introduced":"0.0.1"}]}]}]', '[]'),
 	('GHSA-aaaa-bbbb-cccc', 'vulnerability', 'Prototype pollution in evil-pkg',
-	 '[{"package":{"ecosystem":"npm","name":"evil-pkg","purl":"pkg:npm/evil-pkg"},"ranges":[{"type":"SEMVER","events":[{"introduced":"0.0.1"}]}]}]', '[]');`
+	 '[{"package":{"ecosystem":"npm","name":"evil-pkg","purl":"pkg:npm/evil-pkg"},"ranges":[{"type":"SEMVER","events":[{"introduced":"0.0.1"}]}]}]', '[]'),
+	('MAL-2026-995', 'malicious', 'Malicious code in vl-ui-contact-card (npm)',
+	 '[{"package":{"ecosystem":"npm","name":"vl-ui-contact-card","purl":"pkg:npm/vl-ui-contact-card"},"ranges":null,"severity":null,"versions":["10.1.1"]}]', '[]');`
 
 func envOr(key, fallback string) string {
 	if value := os.Getenv(key); value != "" {
@@ -131,4 +133,25 @@ func TestWorkspaceFindingsReportMaliciousAdvisoriesSeparately(t *testing.T) {
 	assert.Equal(t, "MAL-2024-1", advisories[0].AdvisoryId)
 	assert.Equal(t, "evil-pkg", advisories[0].AffectedDependency)
 	assert.True(t, advisories[0].DirectDependency)
+}
+
+func TestWorkspaceFindingsReportMalwareListedByExactVersion(t *testing.T) {
+	db := maliciousAdvisoriesDB(t)
+	vm := matcher.VulnerabilityMatcher{
+		Ecosystems:        []ecosystemTypes.Ecosystem{ecosystemTypes.NODEJS_OR_JS},
+		ConflictResolver:  conflictResolver.TrustOSVFirst,
+		PackageRepository: packageRepository.PackageRepository{},
+	}
+
+	_, listed := vm.GetWorkspaceFindings(map[string]map[string]sbomTypes.Versions{
+		"vl-ui-contact-card": {"10.1.1": {Direct: true}},
+	}, db)
+	_, unlisted := vm.GetWorkspaceFindings(map[string]map[string]sbomTypes.Versions{
+		"vl-ui-contact-card": {"10.1.2": {Direct: true}},
+	}, db)
+
+	require.Len(t, listed, 1)
+	assert.Equal(t, "MAL-2026-995", listed[0].AdvisoryId)
+	assert.Equal(t, "10.1.1", listed[0].AffectedVersion)
+	assert.Empty(t, unlisted)
 }
