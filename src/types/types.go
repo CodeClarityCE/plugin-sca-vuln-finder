@@ -141,6 +141,8 @@ type AnalysisInfo struct {
 	ImportPathSeperator      string                     `json:"import_path_seperator"`
 	DefaultWorkspaceName     string                     `json:"default_workspace_name"`
 	SelfManagedWorkspaceName string                     `json:"self_managed_workspace_name"`
+	// KnowledgeSnapshot is every knowledge source's state when the analysis ran. Absent on older analyses.
+	KnowledgeSnapshot *knowledge.KnowledgeSnapshot `json:"knowledge_snapshot,omitempty"`
 }
 
 type CVSS_CLASSV3 string
