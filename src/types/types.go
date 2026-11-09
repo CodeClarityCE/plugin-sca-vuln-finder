@@ -200,10 +200,14 @@ type Vulnerability struct {
 	OSVMatch           *OSVVulnerability  `json:"OSVMatch,omitempty"`
 	NVDMatch           *NVDVulnerability  `json:"NVDMatch,omitempty"`
 	GCVEMatch          *GCVEVulnerability `json:"GCVEMatch,omitempty"`
-	Severity           VulnerabilityMatchSeverity
-	EPSS               *EPSS `json:"EPSS,omitempty"`
-	Weaknesses         []VulnerabilityMatchWeakness
-	Conflict           Conflict
+	// Matches from the same source for this vulnerability and dependency that are not shown.
+	AdditionalOSVMatches  []OSVVulnerability  `json:"AdditionalOSVMatches,omitempty"`
+	AdditionalNVDMatches  []NVDVulnerability  `json:"AdditionalNVDMatches,omitempty"`
+	AdditionalGCVEMatches []GCVEVulnerability `json:"AdditionalGCVEMatches,omitempty"`
+	Severity              VulnerabilityMatchSeverity
+	EPSS                  *EPSS `json:"EPSS,omitempty"`
+	Weaknesses            []VulnerabilityMatchWeakness
+	Conflict              Conflict
 	// Extension-related fields for PHP extension vulnerabilities
 	PackageName      string   `json:"package_name,omitempty"`
 	CurrentVersion   string   `json:"current_version,omitempty"`
@@ -225,10 +229,15 @@ type Conflict struct {
 	ConflictFlag   conflict.ConflictFlag
 }
 
+// Pairs holds what each knowledge source says about one vulnerability and dependency.
+// NVD, OSV and GCVE are the matches shown; the slices hold every match, shown one first.
 type Pairs struct {
 	NVD            NVDVulnerability
 	OSV            OSVVulnerability
 	GCVE           GCVEVulnerability
+	NVDMatches     []NVDVulnerability
+	OSVMatches     []OSVVulnerability
+	GCVEMatches    []GCVEVulnerability
 	ConflictWinner conflict.ResolveWinner
 	ConflictFlag   conflict.ConflictFlag
 }
