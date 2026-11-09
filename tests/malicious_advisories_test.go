@@ -35,7 +35,9 @@ CREATE TABLE osv (
 	aliases jsonb, related jsonb, summary varchar, details varchar, severity jsonb,
 	affected jsonb, "references" jsonb, credits jsonb, database_specific jsonb,
 	cwes jsonb, cve varchar,
-	kind varchar NOT NULL DEFAULT 'vulnerability'
+	kind varchar NOT NULL DEFAULT 'vulnerability',
+	retired_reason varchar,
+	retired_at timestamptz
 );
 INSERT INTO osv (osv_id, kind, summary, affected, aliases) VALUES
 	('MAL-2024-1', 'malicious', 'Malicious code in evil-pkg',
