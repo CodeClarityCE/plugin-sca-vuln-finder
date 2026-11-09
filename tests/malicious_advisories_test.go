@@ -45,7 +45,22 @@ INSERT INTO osv (osv_id, kind, summary, affected, aliases) VALUES
 	('GHSA-aaaa-bbbb-cccc', 'vulnerability', 'Prototype pollution in evil-pkg',
 	 '[{"package":{"ecosystem":"npm","name":"evil-pkg","purl":"pkg:npm/evil-pkg"},"ranges":[{"type":"SEMVER","events":[{"introduced":"0.0.1"}]}]}]', '[]'),
 	('MAL-2026-995', 'malicious', 'Malicious code in vl-ui-contact-card (npm)',
-	 '[{"package":{"ecosystem":"npm","name":"vl-ui-contact-card","purl":"pkg:npm/vl-ui-contact-card"},"ranges":null,"severity":null,"versions":["10.1.1"]}]', '[]');`
+	 '[{"package":{"ecosystem":"npm","name":"vl-ui-contact-card","purl":"pkg:npm/vl-ui-contact-card"},"ranges":null,"severity":null,"versions":["10.1.1"]}]', '[]'),
+	('MAL-2025-47196', 'malicious', 'Malicious code in ng2-file-upload (npm)',
+	 '[{"package":{"ecosystem":"npm","name":"ng2-file-upload","purl":"pkg:npm/ng2-file-upload"},"ranges":[{"type":"SEMVER","events":[{"introduced":"8.0.1","fixed":"","last_affected":"","limit":""},{"introduced":"","fixed":"","last_affected":"8.0.3","limit":""},{"introduced":"7.0.2","fixed":"","last_affected":"","limit":""},{"introduced":"","fixed":"","last_affected":"7.0.3","limit":""}]}],"severity":null,"versions":null}]', '[]');
+CREATE TABLE package (
+	id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+	name varchar, language varchar, description varchar, homepage varchar, latest_version varchar,
+	versions jsonb, time timestamptz, keywords jsonb, source jsonb, license varchar, licenses jsonb, extra jsonb
+);
+CREATE TABLE version (
+	id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+	package_id uuid, version varchar, dependencies jsonb, dev_dependencies jsonb, extra jsonb,
+	created_at timestamptz, updated_at timestamptz
+);
+INSERT INTO package (name) VALUES ('ng2-file-upload');
+INSERT INTO version (package_id, version)
+	SELECT id, v FROM package, unnest(ARRAY['7.0.1','7.0.2','7.0.3','7.0.4','8.0.1','8.0.2','8.0.3','8.0.4']) v;`
 
 func envOr(key, fallback string) string {
 	if value := os.Getenv(key); value != "" {
@@ -154,4 +169,24 @@ func TestWorkspaceFindingsReportMalwareListedByExactVersion(t *testing.T) {
 	assert.Equal(t, "MAL-2026-995", listed[0].AdvisoryId)
 	assert.Equal(t, "10.1.1", listed[0].AffectedVersion)
 	assert.Empty(t, unlisted)
+}
+
+func TestWorkspaceFindingsReportMalwareInEveryAffectedInterval(t *testing.T) {
+	db := maliciousAdvisoriesDB(t)
+	vm := matcher.VulnerabilityMatcher{
+		Ecosystems:        []ecosystemTypes.Ecosystem{ecosystemTypes.NODEJS_OR_JS},
+		ConflictResolver:  conflictResolver.TrustOSVFirst,
+		PackageRepository: packageRepository.PackageRepository{},
+	}
+	flagged := func(version string) bool {
+		_, advisories := vm.GetWorkspaceFindings(map[string]map[string]sbomTypes.Versions{
+			"ng2-file-upload": {version: {Direct: true}},
+		}, db)
+		return len(advisories) == 1
+	}
+
+	assert.True(t, flagged("8.0.3"))
+	assert.True(t, flagged("7.0.3"))
+	assert.False(t, flagged("8.0.4"))
+	assert.False(t, flagged("7.0.4"))
 }
