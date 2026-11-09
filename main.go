@@ -12,11 +12,13 @@ import (
 	sbom "github.com/CodeClarityCE/plugin-sbom-javascript/src/types/sbom/js"
 	vulnerabilities "github.com/CodeClarityCE/plugin-sca-vuln-finder/src"
 	"github.com/CodeClarityCE/plugin-sca-vuln-finder/src/outputGenerator"
+	"github.com/CodeClarityCE/plugin-sca-vuln-finder/src/repository/sourcesync"
 	vulnerabilityFinder "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/types"
 	"github.com/CodeClarityCE/utility-boilerplates"
 	types_amqp "github.com/CodeClarityCE/utility-types/amqp"
 	codeclarity "github.com/CodeClarityCE/utility-types/codeclarity_db"
 	exceptionManager "github.com/CodeClarityCE/utility-types/exceptions"
+	knowledge "github.com/CodeClarityCE/utility-types/knowledge_db"
 	plugin "github.com/CodeClarityCE/utility-types/plugin_db"
 	"github.com/google/uuid"
 )
@@ -175,17 +177,11 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 	log.Printf("Project ID: %s", project.Id.String())
 	log.Printf("Project URL: %s", project.Url)
 
-	// If no SBOMs were found, return success with empty results
-	if len(sbomKeys) == 0 {
-		log.Printf("No SBOM results found - this might indicate SBOM plugins haven't completed yet or failed")
-		vulnOutput = outputGenerator.SuccessOutput(map[string]vulnerabilityFinder.Workspace{}, sbom.AnalysisInfo{
-			Status: codeclarity.SUCCESS,
-		}, start)
-	} else {
-		vulnOutput, failureReason = combineVulnOutputs(sbomKeys, func(sbomInfo sbomKey) (vulnerabilityFinder.Output, error) {
-			return analyzeSbom(databases, sbomInfo, project.Url, start, knowledgeAsOf)
-		}, start)
-	}
+	// Taken before matching so it describes the knowledge the results were built from.
+	snapshot := sourcesync.Snapshot(context.Background(), databases.Knowledge, time.Now().UTC(), knowledgeAsOf)
+	vulnOutput, failureReason = buildVulnOutput(sbomKeys, func(sbomInfo sbomKey) (vulnerabilityFinder.Output, error) {
+		return analyzeSbom(databases, sbomInfo, project.Url, start, knowledgeAsOf)
+	}, start, snapshot)
 
 	vuln_result := codeclarity.Result{
 		Result:     vulnerabilityFinder.ConvertOutputToMap(vulnOutput),
@@ -330,6 +326,22 @@ func analyzeSbom(databases *boilerplates.PluginDatabases, sbomInfo sbomKey, proj
 	log.Printf("Total packages across all workspaces: %d", totalPackages)
 
 	return vulnerabilities.Start(projectUrl, sbomOutput, sbomInfo.language, start, databases.Knowledge, knowledgeAsOf), nil
+}
+
+// buildVulnOutput runs detection on every SBOM, or returns an empty success when there is none, and records the knowledge snapshot.
+func buildVulnOutput(sbomKeys []sbomKey, analyze func(sbomKey) (vulnerabilityFinder.Output, error), start time.Time, snapshot knowledge.KnowledgeSnapshot) (vulnerabilityFinder.Output, string) {
+	var output vulnerabilityFinder.Output
+	reason := ""
+	if len(sbomKeys) == 0 {
+		log.Printf("No SBOM results found - this might indicate SBOM plugins haven't completed yet or failed")
+		output = outputGenerator.SuccessOutput(map[string]vulnerabilityFinder.Workspace{}, sbom.AnalysisInfo{
+			Status: codeclarity.SUCCESS,
+		}, start)
+	} else {
+		output, reason = combineVulnOutputs(sbomKeys, analyze, start)
+	}
+	output.AnalysisInfo.KnowledgeSnapshot = &snapshot
+	return output, reason
 }
 
 // combineVulnOutputs merges the vulnerability results of every SBOM and says why it failed, if it did.
