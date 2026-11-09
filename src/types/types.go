@@ -221,10 +221,12 @@ type Vulnerability struct {
 	AdditionalOSVMatches  []OSVVulnerability  `json:"AdditionalOSVMatches,omitempty"`
 	AdditionalNVDMatches  []NVDVulnerability  `json:"AdditionalNVDMatches,omitempty"`
 	AdditionalGCVEMatches []GCVEVulnerability `json:"AdditionalGCVEMatches,omitempty"`
-	Severity              VulnerabilityMatchSeverity
-	EPSS                  *EPSS `json:"EPSS,omitempty"`
-	Weaknesses            []VulnerabilityMatchWeakness
-	Conflict              Conflict
+	// Every source match for this vulnerability and dependency, kept for comparing sources. Absent on older analyses.
+	SourceMatches []SourceMatch `json:"SourceMatches,omitempty"`
+	Severity      VulnerabilityMatchSeverity
+	EPSS          *EPSS `json:"EPSS,omitempty"`
+	Weaknesses    []VulnerabilityMatchWeakness
+	Conflict      Conflict
 	// Extension-related fields for PHP extension vulnerabilities
 	PackageName      string   `json:"package_name,omitempty"`
 	CurrentVersion   string   `json:"current_version,omitempty"`
@@ -239,6 +241,42 @@ type Vulnerability struct {
 	ModifiedDate     string   `json:"modified_date,omitempty"`
 	WithdrawnDate    string   `json:"withdrawn_date,omitempty"`
 	ExtensionType    string   `json:"extension_type,omitempty"` // "php-extension" for PHP extensions
+}
+
+// SourceMatch is one knowledge source's claim that a vulnerability affects a dependency version.
+type SourceMatch struct {
+	// Source is the knowledge source name, such as "osv", "nvd", "gcve" or "friends_of_php".
+	Source   string `json:"source"`
+	RecordId string `json:"record_id"`
+	// Winning is true for the one match shown to users.
+	Winning  bool                   `json:"winning"`
+	Affected SourceAffected         `json:"affected"`
+	Evidence VulnerableEvidenceType `json:"evidence"`
+	// Severity is nil when the source gives no usable CVSS score.
+	Severity  *SourceSeverity `json:"severity"`
+	Published string          `json:"published,omitempty"`
+	Modified  string          `json:"modified,omitempty"`
+}
+
+// SourceAffected is the affected versions one source gives for the dependency.
+type SourceAffected struct {
+	Ranges    []SourceRange `json:"ranges"`
+	Exact     []string      `json:"exact"`
+	Universal bool          `json:"universal"`
+}
+
+// SourceRange is introduced <= version < fixed; an empty bound is open.
+type SourceRange struct {
+	Introduced string `json:"introduced,omitempty"`
+	Fixed      string `json:"fixed,omitempty"`
+}
+
+// SourceSeverity is the CVSS score one source gives.
+type SourceSeverity struct {
+	Score  float64      `json:"score"`
+	Type   SeverityType `json:"type"`
+	Vector string       `json:"vector"`
+	Class  CVSS_CLASSV3 `json:"class"`
 }
 
 type Conflict struct {
