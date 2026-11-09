@@ -79,3 +79,20 @@ func TestCombineVulnOutputsSaysWhichSbomFailed(t *testing.T) {
 		})
 	}
 }
+
+func TestCombineVulnOutputsKeepsMaliciousAdvisoriesFromEverySbom(t *testing.T) {
+	keys := []sbomKey{{uuid.New(), "JS", "js-sbom"}, {uuid.New(), "PHP", "php-sbom"}}
+
+	out, _ := combineVulnOutputs(keys, func(k sbomKey) (vulnerabilityFinder.Output, error) {
+		output := vulnerabilityFinder.Output{WorkSpaces: map[string]vulnerabilityFinder.Workspace{
+			".": {MaliciousPackageAdvisories: []vulnerabilityFinder.MaliciousPackageAdvisory{{AdvisoryId: "MAL-" + k.language}}},
+		}}
+		output.AnalysisInfo.Status = codeclarity.SUCCESS
+		return output, nil
+	}, time.Now())
+
+	got := out.WorkSpaces["."].MaliciousPackageAdvisories
+	if len(got) != 2 || got[0].AdvisoryId != "MAL-JS" || got[1].AdvisoryId != "MAL-PHP" {
+		t.Fatalf("advisories = %+v, want MAL-JS and MAL-PHP", got)
+	}
+}

@@ -89,6 +89,23 @@ type DependencyInfo struct {
 }
 type Workspace struct {
 	Vulnerabilities []Vulnerability
+	// Packages reported as intentionally harmful. Absent on older analyses and when there are none.
+	MaliciousPackageAdvisories []MaliciousPackageAdvisory `json:"MaliciousPackageAdvisories,omitempty"`
+}
+
+// MaliciousPackageAdvisory says an installed package version is intentionally harmful.
+// It has no severity or EPSS score and is not counted as a vulnerability.
+type MaliciousPackageAdvisory struct {
+	AdvisoryId         string
+	AffectedDependency string
+	AffectedVersion    string
+	DirectDependency   bool
+	Summary            string   `json:"Summary,omitempty"`
+	Details            string   `json:"Details,omitempty"`
+	Published          string   `json:"Published,omitempty"`
+	Modified           string   `json:"Modified,omitempty"`
+	Aliases            []string `json:"Aliases,omitempty"`
+	References         []string `json:"References,omitempty"`
 }
 
 type Output struct {
