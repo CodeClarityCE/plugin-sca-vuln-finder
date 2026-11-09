@@ -38,6 +38,17 @@ func FilterWithdrawn(reports []knowledge_db.OSVItem, asof *time.Time) []knowledg
 	return kept
 }
 
+// WithoutMalicious drops malicious package advisories.
+func WithoutMalicious(reports []knowledge_db.OSVItem) []knowledge_db.OSVItem {
+	kept := make([]knowledge_db.OSVItem, 0, len(reports))
+	for _, report := range reports {
+		if report.Kind != knowledge_db.AdvisoryKindMalicious {
+			kept = append(kept, report)
+		}
+	}
+	return kept
+}
+
 // GetAllOSVReportsForPurl retrieves all OSV reports for a given package URL (purl).
 // It queries both the standard OSV table and the FriendsOfPHP table for PHP packages.
 // The function returns a slice of OSVItem, which represents the OSV reports, and an error if any.
@@ -59,7 +70,7 @@ func GetAllOSVReportsForPurl(purl string, knowledge *bun.DB) ([]knowledge_db.OSV
 	}
 
 	rows, err := knowledge.QueryContext(ctx, `
-		SELECT DISTINCT "id", "osv_id", "schema_version", "modified", "published", "withdrawn", "aliases", "related", "summary", "details", "severity", "affected", "references", "credits", "database_specific", "cwes", "cve", vlai_score, vlai_confidence
+		SELECT DISTINCT "id", "osv_id", "schema_version", "modified", "published", "withdrawn", "aliases", "related", "summary", "details", "severity", "affected", "references", "credits", "database_specific", "cwes", "cve", "kind", vlai_score, vlai_confidence
 		FROM osv
 		WHERE ("affected" @> ?::jsonb)
 	`, string(containmentValue))

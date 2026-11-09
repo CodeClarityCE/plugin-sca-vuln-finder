@@ -355,6 +355,7 @@ func combineVulnOutputs(sbomKeys []sbomKey, analyze func(sbomKey) (vulnerability
 		for wsKey, ws := range langOutput.WorkSpaces {
 			if existing, ok := mergedWorkspaces[wsKey]; ok {
 				existing.Vulnerabilities = append(existing.Vulnerabilities, ws.Vulnerabilities...)
+				existing.MaliciousPackageAdvisories = append(existing.MaliciousPackageAdvisories, ws.MaliciousPackageAdvisories...)
 				mergedWorkspaces[wsKey] = existing
 			} else {
 				mergedWorkspaces[wsKey] = ws
