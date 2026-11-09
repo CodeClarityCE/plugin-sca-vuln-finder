@@ -90,7 +90,7 @@ func Start(projectURL string, sbom sbomTypes.Output, languageId string, start ti
 
 	for _, workspaceKey := range workspaceKeys {
 		workspace := sbom.WorkSpaces[workspaceKey]
-		vulns := vulnerabilityMatcher.GetWorkspaceVulnerabilities(workspace.Dependencies, knowledge)
+		vulns, maliciousAdvisories := vulnerabilityMatcher.GetWorkspaceFindings(workspace.Dependencies, knowledge)
 
 		// For PHP projects, also analyze PHP extension vulnerabilities
 		if languageId == "PHP" {
@@ -117,7 +117,8 @@ func Start(projectURL string, sbom sbomTypes.Output, languageId string, start ti
 		vulns = append(vulns, privateVulns...)
 
 		workspaces[workspaceKey] = vulnerabilityFinder.Workspace{
-			Vulnerabilities: vulns,
+			Vulnerabilities:            vulns,
+			MaliciousPackageAdvisories: maliciousAdvisories,
 		}
 
 		user := os.Getenv("VULNERABILITY_LOOKUP_API_KEY")

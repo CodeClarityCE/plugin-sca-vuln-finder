@@ -44,3 +44,32 @@ func TestFilterWithdrawnDropsAdvisoryWithdrawnBeforeAsOf(t *testing.T) {
 		t.Errorf("got %v, want only ACTIVE", got)
 	}
 }
+
+func retiredFixture() []knowledge_db.OSVItem {
+	active := knowledge_db.OSVItem{OSVId: "ACTIVE"}
+	retired := knowledge_db.OSVItem{OSVId: "RETIRED"}
+	retired.RetiredReason = knowledge_db.RetiredRemoved
+	retired.RetiredAt = time.Date(2025, 12, 2, 15, 0, 0, 0, time.UTC)
+	return []knowledge_db.OSVItem{active, retired}
+}
+
+func TestFilterRetiredDropsRetiredRecordsByDefault(t *testing.T) {
+	got := ids(osv.FilterRetired(retiredFixture(), nil))
+	if len(got) != 1 || got[0] != "ACTIVE" {
+		t.Errorf("got %v, want only ACTIVE", got)
+	}
+}
+
+func TestFilterRetiredKeepsRecordBeforeItsRetirementDate(t *testing.T) {
+	asof := time.Date(2025, 6, 1, 0, 0, 0, 0, time.UTC)
+	if got := osv.FilterRetired(retiredFixture(), &asof); len(got) != 2 {
+		t.Errorf("got %v, want both", ids(got))
+	}
+}
+
+func TestFilterRetiredDropsRecordAfterItsRetirementDate(t *testing.T) {
+	asof := time.Date(2025, 12, 2, 0, 0, 0, 0, time.UTC)
+	if got := osv.FilterRetired(retiredFixture(), &asof); len(got) != 1 {
+		t.Errorf("got %v, want only ACTIVE on the retirement day", ids(got))
+	}
+}

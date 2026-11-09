@@ -30,3 +30,15 @@ func KeepPublishedOnOrBefore(published string, asof time.Time) bool {
 	}
 	return true
 }
+
+// ActiveAsOf reports whether a retired record counts as active. Without an as-of date a
+// retired record is excluded; with one it stays active until the end of the day before its retirement.
+func ActiveAsOf(retiredAt time.Time, asof *time.Time) bool {
+	if retiredAt.IsZero() {
+		return true
+	}
+	if asof == nil {
+		return false
+	}
+	return !retiredAt.Before(asof.UTC().Truncate(24 * time.Hour).Add(24 * time.Hour))
+}

@@ -30,7 +30,7 @@ func GetVulnsByProduct(product string, knowledge *bun.DB) ([]knowledge_db.GCVEIt
 	rows, err := knowledge.QueryContext(ctx, `
 	SELECT DISTINCT id, gcve_id, cve_id, data_version, state, date_published, date_updated,
 	       assigner_org_id, descriptions, affected, affected_flattened, metrics, problem_types,
-	       "references", adp_enrichments, cwes, vlai_score, vlai_confidence
+	       "references", adp_enrichments, cwes, vlai_score, vlai_confidence, retired_reason, retired_at
 	FROM gcve
 	WHERE ("affected_flattened" @> ?::jsonb)
 	AND state = 'PUBLISHED';

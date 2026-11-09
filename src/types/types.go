@@ -89,6 +89,23 @@ type DependencyInfo struct {
 }
 type Workspace struct {
 	Vulnerabilities []Vulnerability
+	// Packages reported as intentionally harmful. Absent on older analyses and when there are none.
+	MaliciousPackageAdvisories []MaliciousPackageAdvisory `json:"MaliciousPackageAdvisories,omitempty"`
+}
+
+// MaliciousPackageAdvisory says an installed package version is intentionally harmful.
+// It has no severity or EPSS score and is not counted as a vulnerability.
+type MaliciousPackageAdvisory struct {
+	AdvisoryId         string
+	AffectedDependency string
+	AffectedVersion    string
+	DirectDependency   bool
+	Summary            string   `json:"Summary,omitempty"`
+	Details            string   `json:"Details,omitempty"`
+	Published          string   `json:"Published,omitempty"`
+	Modified           string   `json:"Modified,omitempty"`
+	Aliases            []string `json:"Aliases,omitempty"`
+	References         []string `json:"References,omitempty"`
 }
 
 type Output struct {
@@ -200,10 +217,14 @@ type Vulnerability struct {
 	OSVMatch           *OSVVulnerability  `json:"OSVMatch,omitempty"`
 	NVDMatch           *NVDVulnerability  `json:"NVDMatch,omitempty"`
 	GCVEMatch          *GCVEVulnerability `json:"GCVEMatch,omitempty"`
-	Severity           VulnerabilityMatchSeverity
-	EPSS               *EPSS `json:"EPSS,omitempty"`
-	Weaknesses         []VulnerabilityMatchWeakness
-	Conflict           Conflict
+	// Matches from the same source for this vulnerability and dependency that are not shown.
+	AdditionalOSVMatches  []OSVVulnerability  `json:"AdditionalOSVMatches,omitempty"`
+	AdditionalNVDMatches  []NVDVulnerability  `json:"AdditionalNVDMatches,omitempty"`
+	AdditionalGCVEMatches []GCVEVulnerability `json:"AdditionalGCVEMatches,omitempty"`
+	Severity              VulnerabilityMatchSeverity
+	EPSS                  *EPSS `json:"EPSS,omitempty"`
+	Weaknesses            []VulnerabilityMatchWeakness
+	Conflict              Conflict
 	// Extension-related fields for PHP extension vulnerabilities
 	PackageName      string   `json:"package_name,omitempty"`
 	CurrentVersion   string   `json:"current_version,omitempty"`
@@ -225,10 +246,15 @@ type Conflict struct {
 	ConflictFlag   conflict.ConflictFlag
 }
 
+// Pairs holds what each knowledge source says about one vulnerability and dependency.
+// NVD, OSV and GCVE are the matches shown; the slices hold every match, shown one first.
 type Pairs struct {
 	NVD            NVDVulnerability
 	OSV            OSVVulnerability
 	GCVE           GCVEVulnerability
+	NVDMatches     []NVDVulnerability
+	OSVMatches     []OSVVulnerability
+	GCVEMatches    []GCVEVulnerability
 	ConflictWinner conflict.ResolveWinner
 	ConflictFlag   conflict.ConflictFlag
 }
