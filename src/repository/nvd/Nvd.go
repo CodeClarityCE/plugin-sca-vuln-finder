@@ -27,7 +27,7 @@ func GetVulnsByDepName(depName string, knowledge *bun.DB) ([]knowledge_db.NVDIte
 	}
 
 	rows, err := knowledge.QueryContext(ctx, `
-	SELECT DISTINCT id, nvd_id, "sourceIdentifier", published, "lastModified", "vulnStatus", descriptions, metrics, weaknesses, configurations, "affectedFlattened", affected, "references", vlai_score, vlai_confidence
+	SELECT DISTINCT id, nvd_id, "sourceIdentifier", published, "lastModified", "vulnStatus", descriptions, metrics, weaknesses, configurations, "affectedFlattened", affected, "references", retired_reason, retired_at, vlai_score, vlai_confidence
 	FROM nvd
 	WHERE
 	("affectedFlattened" @> ?::jsonb)

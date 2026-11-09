@@ -38,6 +38,17 @@ func FilterWithdrawn(reports []knowledge_db.OSVItem, asof *time.Time) []knowledg
 	return kept
 }
 
+// FilterRetired drops retired records, except those still active on the as-of date.
+func FilterRetired(reports []knowledge_db.OSVItem, asof *time.Time) []knowledge_db.OSVItem {
+	kept := make([]knowledge_db.OSVItem, 0, len(reports))
+	for _, report := range reports {
+		if repository.ActiveAsOf(report.RetiredAt, asof) {
+			kept = append(kept, report)
+		}
+	}
+	return kept
+}
+
 // GetAllOSVReportsForPurl retrieves all OSV reports for a given package URL (purl).
 // It queries both the standard OSV table and the FriendsOfPHP table for PHP packages.
 // The function returns a slice of OSVItem, which represents the OSV reports, and an error if any.
@@ -59,7 +70,7 @@ func GetAllOSVReportsForPurl(purl string, knowledge *bun.DB) ([]knowledge_db.OSV
 	}
 
 	rows, err := knowledge.QueryContext(ctx, `
-		SELECT DISTINCT "id", "osv_id", "schema_version", "modified", "published", "withdrawn", "aliases", "related", "summary", "details", "severity", "affected", "references", "credits", "database_specific", "cwes", "cve", vlai_score, vlai_confidence
+		SELECT DISTINCT "id", "osv_id", "schema_version", "modified", "published", "withdrawn", "aliases", "related", "summary", "details", "severity", "affected", "references", "credits", "database_specific", "cwes", "cve", vlai_score, vlai_confidence, retired_reason, retired_at
 		FROM osv
 		WHERE ("affected" @> ?::jsonb)
 	`, string(containmentValue))
@@ -164,6 +175,7 @@ func convertFriendsOfPHPToOSV(advisory knowledge_db.FriendsOfPHPAdvisory) knowle
 	}
 
 	return knowledge_db.OSVItem{
+		Retirement: advisory.Retirement,
 		OSVId:      "FRIENDSOFPHP-" + advisory.AdvisoryId,
 		Summary:    advisory.Title,
 		Details:    advisory.Description,
