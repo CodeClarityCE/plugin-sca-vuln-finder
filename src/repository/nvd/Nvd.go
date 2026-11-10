@@ -9,6 +9,9 @@ import (
 	"github.com/uptrace/bun"
 )
 
+// MatchableStatus selects the NVD CVEs vuln-finder matches: Analyzed or Modified, never Deferred or Rejected.
+const MatchableStatus = `("vulnStatus" = 'Analyzed' OR "vulnStatus" = 'Modified')`
+
 func GetVulnsByDepName(depName string, knowledge *bun.DB) ([]knowledge_db.NVDItem, error) {
 	vulnerabilities := []knowledge_db.NVDItem{}
 
@@ -31,7 +34,7 @@ func GetVulnsByDepName(depName string, knowledge *bun.DB) ([]knowledge_db.NVDIte
 	FROM nvd
 	WHERE
 	("affectedFlattened" @> ?::jsonb)
-	AND ("vulnStatus" = 'Analyzed' OR "vulnStatus" = 'Modified');
+	AND `+MatchableStatus+`;
 	`, string(containmentValue))
 	if err != nil {
 		log.Printf("Error querying NVD table: %v", err)
