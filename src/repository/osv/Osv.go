@@ -12,18 +12,47 @@ import (
 	"github.com/uptrace/bun"
 )
 
+// keepReports returns the reports keep accepts, in order.
+func keepReports(reports []knowledge_db.OSVItem, keep func(knowledge_db.OSVItem) bool) []knowledge_db.OSVItem {
+	kept := make([]knowledge_db.OSVItem, 0, len(reports))
+	for _, report := range reports {
+		if keep(report) {
+			kept = append(kept, report)
+		}
+	}
+	return kept
+}
+
 // FilterPublishedOnOrBefore drops OSV reports whose Published timestamp falls
 // after the end of the asof day (the whole asof day stays in range). Reports
 // with an empty or unparseable Published timestamp are kept, matching the
 // semantics of the knowledge osv_asof mirror.
 func FilterPublishedOnOrBefore(reports []knowledge_db.OSVItem, asof time.Time) []knowledge_db.OSVItem {
-	kept := make([]knowledge_db.OSVItem, 0, len(reports))
-	for _, report := range reports {
-		if repository.KeepPublishedOnOrBefore(report.Published, asof) {
-			kept = append(kept, report)
-		}
-	}
-	return kept
+	return keepReports(reports, func(report knowledge_db.OSVItem) bool {
+		return repository.KeepPublishedOnOrBefore(report.Published, asof)
+	})
+}
+
+// FilterWithdrawn drops withdrawn advisories. With an as-of date, an advisory
+// withdrawn after that date is kept, since it was still active then.
+func FilterWithdrawn(reports []knowledge_db.OSVItem, asof *time.Time) []knowledge_db.OSVItem {
+	return keepReports(reports, func(report knowledge_db.OSVItem) bool {
+		return report.Withdrawn == "" || (asof != nil && !repository.KeepPublishedOnOrBefore(report.Withdrawn, *asof))
+	})
+}
+
+// FilterRetired drops retired records, except those still active on the as-of date.
+func FilterRetired(reports []knowledge_db.OSVItem, asof *time.Time) []knowledge_db.OSVItem {
+	return keepReports(reports, func(report knowledge_db.OSVItem) bool {
+		return repository.ActiveAsOf(report.RetiredAt, asof)
+	})
+}
+
+// WithoutMalicious drops malicious package advisories.
+func WithoutMalicious(reports []knowledge_db.OSVItem) []knowledge_db.OSVItem {
+	return keepReports(reports, func(report knowledge_db.OSVItem) bool {
+		return report.Kind != knowledge_db.AdvisoryKindMalicious
+	})
 }
 
 // GetAllOSVReportsForPurl retrieves all OSV reports for a given package URL (purl).
@@ -47,7 +76,7 @@ func GetAllOSVReportsForPurl(purl string, knowledge *bun.DB) ([]knowledge_db.OSV
 	}
 
 	rows, err := knowledge.QueryContext(ctx, `
-		SELECT DISTINCT "id", "osv_id", "schema_version", "modified", "published", "withdrawn", "aliases", "related", "summary", "details", "severity", "affected", "references", "credits", "database_specific", "cwes", "cve", vlai_score, vlai_confidence
+		SELECT DISTINCT "id", "osv_id", "schema_version", "modified", "published", "withdrawn", "aliases", "related", "summary", "details", "severity", "affected", "references", "credits", "database_specific", "cwes", "cve", "kind", vlai_score, vlai_confidence, retired_reason, retired_at
 		FROM osv
 		WHERE ("affected" @> ?::jsonb)
 	`, string(containmentValue))
@@ -152,6 +181,7 @@ func convertFriendsOfPHPToOSV(advisory knowledge_db.FriendsOfPHPAdvisory) knowle
 	}
 
 	return knowledge_db.OSVItem{
+		Retirement: advisory.Retirement,
 		OSVId:      "FRIENDSOFPHP-" + advisory.AdvisoryId,
 		Summary:    advisory.Title,
 		Details:    advisory.Description,

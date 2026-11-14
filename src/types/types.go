@@ -89,6 +89,23 @@ type DependencyInfo struct {
 }
 type Workspace struct {
 	Vulnerabilities []Vulnerability
+	// Packages reported as intentionally harmful. Absent on older analyses and when there are none.
+	MaliciousPackageAdvisories []MaliciousPackageAdvisory `json:"MaliciousPackageAdvisories,omitempty"`
+}
+
+// MaliciousPackageAdvisory says an installed package version is intentionally harmful.
+// It has no severity or EPSS score and is not counted as a vulnerability.
+type MaliciousPackageAdvisory struct {
+	AdvisoryId         string
+	AffectedDependency string
+	AffectedVersion    string
+	DirectDependency   bool
+	Summary            string   `json:"Summary,omitempty"`
+	Details            string   `json:"Details,omitempty"`
+	Published          string   `json:"Published,omitempty"`
+	Modified           string   `json:"Modified,omitempty"`
+	Aliases            []string `json:"Aliases,omitempty"`
+	References         []string `json:"References,omitempty"`
 }
 
 type Output struct {
@@ -124,6 +141,8 @@ type AnalysisInfo struct {
 	ImportPathSeperator      string                     `json:"import_path_seperator"`
 	DefaultWorkspaceName     string                     `json:"default_workspace_name"`
 	SelfManagedWorkspaceName string                     `json:"self_managed_workspace_name"`
+	// KnowledgeSnapshot is every knowledge source's state when the analysis ran. Absent on older analyses.
+	KnowledgeSnapshot *knowledge.KnowledgeSnapshot `json:"knowledge_snapshot,omitempty"`
 }
 
 type CVSS_CLASSV3 string
@@ -200,10 +219,16 @@ type Vulnerability struct {
 	OSVMatch           *OSVVulnerability  `json:"OSVMatch,omitempty"`
 	NVDMatch           *NVDVulnerability  `json:"NVDMatch,omitempty"`
 	GCVEMatch          *GCVEVulnerability `json:"GCVEMatch,omitempty"`
-	Severity           VulnerabilityMatchSeverity
-	EPSS               *EPSS `json:"EPSS,omitempty"`
-	Weaknesses         []VulnerabilityMatchWeakness
-	Conflict           Conflict
+	// Matches from the same source for this vulnerability and dependency that are not shown.
+	AdditionalOSVMatches  []OSVVulnerability  `json:"AdditionalOSVMatches,omitempty"`
+	AdditionalNVDMatches  []NVDVulnerability  `json:"AdditionalNVDMatches,omitempty"`
+	AdditionalGCVEMatches []GCVEVulnerability `json:"AdditionalGCVEMatches,omitempty"`
+	// Every source match for this vulnerability and dependency, kept for comparing sources. Absent on older analyses.
+	SourceMatches []SourceMatch `json:"SourceMatches,omitempty"`
+	Severity      VulnerabilityMatchSeverity
+	EPSS          *EPSS `json:"EPSS,omitempty"`
+	Weaknesses    []VulnerabilityMatchWeakness
+	Conflict      Conflict
 	// Extension-related fields for PHP extension vulnerabilities
 	PackageName      string   `json:"package_name,omitempty"`
 	CurrentVersion   string   `json:"current_version,omitempty"`
@@ -220,15 +245,56 @@ type Vulnerability struct {
 	ExtensionType    string   `json:"extension_type,omitempty"` // "php-extension" for PHP extensions
 }
 
+// SourceMatch is one knowledge source's claim that a vulnerability affects a dependency version.
+type SourceMatch struct {
+	// Source is the knowledge source name, such as "osv", "nvd", "gcve" or "friends_of_php".
+	Source   string `json:"source"`
+	RecordId string `json:"record_id"`
+	// Winning is true for the one match shown to users.
+	Winning  bool                   `json:"winning"`
+	Affected SourceAffected         `json:"affected"`
+	Evidence VulnerableEvidenceType `json:"evidence"`
+	// Severity is nil when the source gives no usable CVSS score.
+	Severity  *SourceSeverity `json:"severity"`
+	Published string          `json:"published,omitempty"`
+	Modified  string          `json:"modified,omitempty"`
+}
+
+// SourceAffected is the affected versions one source gives for the dependency.
+type SourceAffected struct {
+	Ranges    []SourceRange `json:"ranges"`
+	Exact     []string      `json:"exact"`
+	Universal bool          `json:"universal"`
+}
+
+// SourceRange is introduced <= version < fixed; an empty bound is open.
+type SourceRange struct {
+	Introduced string `json:"introduced,omitempty"`
+	Fixed      string `json:"fixed,omitempty"`
+}
+
+// SourceSeverity is the CVSS score one source gives.
+type SourceSeverity struct {
+	Score  float64      `json:"score"`
+	Type   SeverityType `json:"type"`
+	Vector string       `json:"vector"`
+	Class  CVSS_CLASSV3 `json:"class"`
+}
+
 type Conflict struct {
 	ConflictWinner conflict.ResolveWinner
 	ConflictFlag   conflict.ConflictFlag
 }
 
+// Pairs holds what each knowledge source says about one vulnerability and dependency.
+// NVD, OSV and GCVE are the matches shown; the slices hold every match, shown one first.
 type Pairs struct {
 	NVD            NVDVulnerability
 	OSV            OSVVulnerability
 	GCVE           GCVEVulnerability
+	NVDMatches     []NVDVulnerability
+	OSVMatches     []OSVVulnerability
+	GCVEMatches    []GCVEVulnerability
 	ConflictWinner conflict.ResolveWinner
 	ConflictFlag   conflict.ConflictFlag
 }
