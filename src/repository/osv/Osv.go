@@ -3,6 +3,7 @@ package osv
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
@@ -96,13 +97,11 @@ func GetAllOSVReportsForPurl(purl string, knowledge *bun.DB) ([]knowledge_db.OSV
 	if err == nil && purlObj.Type == "composer" {
 		friendsOfPHPMatches, err := getFriendsOfPHPReportsForPackage(purlObj.Name, purlObj.Namespace, knowledge)
 		if err != nil {
-			log.Printf("Error querying FriendsOfPHP: %v", err)
-		} else {
-			// Convert FriendsOfPHP advisories to OSVItem format and add to matches
-			for _, advisory := range friendsOfPHPMatches {
-				osvItem := convertFriendsOfPHPToOSV(advisory)
-				matches = append(matches, osvItem)
-			}
+			return matches, fmt.Errorf("FriendsOfPHP lookup: %w", err)
+		}
+		// Convert FriendsOfPHP advisories to OSVItem format and add to matches
+		for _, advisory := range friendsOfPHPMatches {
+			matches = append(matches, convertFriendsOfPHPToOSV(advisory))
 		}
 	}
 

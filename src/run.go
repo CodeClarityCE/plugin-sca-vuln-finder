@@ -3,6 +3,7 @@ package vulnerabilities
 // package main
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -51,10 +52,16 @@ func declareSightings(projectURL string, vulns []vulnerabilityFinder.Vulnerabili
 // Start starts a vulnerability analysis on the given sbom. knowledgeAsOf, when
 // non-nil, drops OSV advisories published after that day (the whole day stays
 // in range) before matching.
-func Start(projectURL string, sbom sbomTypes.Output, languageId string, start time.Time, knowledge *bun.DB, knowledgeAsOf *time.Time) vulnerabilityFinder.Output {
+func Start(projectURL string, sbom sbomTypes.Output, languageId string, start time.Time, knowledge *bun.DB, knowledgeAsOf *time.Time) (vulnerabilityFinder.Output, error) {
+	return StartWithAdvisories(projectURL, sbom, languageId, start, knowledge, knowledgeAsOf, nil)
+}
+
+// StartWithAdvisories is Start with the advisory lookups supplied; nil reads the knowledge database.
+// A failed knowledge lookup returns a failed output and an ErrKnowledgeLookup error.
+func StartWithAdvisories(projectURL string, sbom sbomTypes.Output, languageId string, start time.Time, knowledge *bun.DB, knowledgeAsOf *time.Time, advisories matcher.Advisories) (vulnerabilityFinder.Output, error) {
 	if sbom.AnalysisInfo.Status != codeclarity.SUCCESS {
 		exceptionManager.AddError("Execution of the previous stage was unsuccessful, upon which the current stage relies", exceptionManager.PREVIOUS_STAGE_FAILED, "Execution of the previous stage was unsuccessful, upon which the current stage relies", exceptionManager.PREVIOUS_STAGE_FAILED)
-		return outputGenerator.FailureOutput(sbom.AnalysisInfo, start)
+		return outputGenerator.FailureOutput(sbom.AnalysisInfo, start), nil
 	}
 
 	var vulnerabilityMatcher matcher.VulnerabilityMatcher
@@ -76,7 +83,12 @@ func Start(projectURL string, sbom sbomTypes.Output, languageId string, start ti
 		}
 	default:
 		exceptionManager.AddError("", exceptionManager.UNSUPPORTED_LANGUAGE_REQUESTED, "", exceptionManager.UNSUPPORTED_LANGUAGE_REQUESTED)
-		return outputGenerator.FailureOutput(sbom.AnalysisInfo, start)
+		return outputGenerator.FailureOutput(sbom.AnalysisInfo, start), nil
+	}
+	vulnerabilityMatcher.Advisories = advisories
+	vulnerabilityMatcher.Failure = &matcher.LookupFailure{}
+	failed := func(err error) (vulnerabilityFinder.Output, error) {
+		return outputGenerator.FailureOutput(sbom.AnalysisInfo, start), err
 	}
 
 	workspaces := map[string]vulnerabilityFinder.Workspace{}
@@ -90,7 +102,10 @@ func Start(projectURL string, sbom sbomTypes.Output, languageId string, start ti
 
 	for _, workspaceKey := range workspaceKeys {
 		workspace := sbom.WorkSpaces[workspaceKey]
-		vulns, maliciousAdvisories := vulnerabilityMatcher.GetWorkspaceFindings(workspace.Dependencies, knowledge)
+		vulns, maliciousAdvisories, err := vulnerabilityMatcher.GetWorkspaceFindings(workspace.Dependencies, knowledge)
+		if err != nil {
+			return failed(err)
+		}
 
 		// For PHP projects, also analyze PHP extension vulnerabilities
 		if languageId == "PHP" {
@@ -103,7 +118,10 @@ func Start(projectURL string, sbom sbomTypes.Output, languageId string, start ti
 			relevantExtensions := analyzer.FilterRelevantExtensions(extensions)
 
 			// Analyze extension vulnerabilities
-			extensionVulns := analyzer.AnalyzeExtensionVulnerabilities(relevantExtensions, knowledge)
+			extensionVulns, err := analyzer.AnalyzeExtensionVulnerabilities(relevantExtensions, knowledge)
+			if err != nil {
+				return failed(fmt.Errorf("%w: %w", matcher.ErrKnowledgeLookup, err))
+			}
 
 			// Merge extension vulnerabilities with package vulnerabilities
 			vulns = append(vulns, extensionVulns...)
@@ -127,5 +145,5 @@ func Start(projectURL string, sbom sbomTypes.Output, languageId string, start ti
 		}
 	}
 
-	return outputGenerator.SuccessOutput(workspaces, sbom.AnalysisInfo, start)
+	return outputGenerator.SuccessOutput(workspaces, sbom.AnalysisInfo, start), nil
 }
