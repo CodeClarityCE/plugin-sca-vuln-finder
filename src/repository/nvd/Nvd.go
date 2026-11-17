@@ -12,15 +12,19 @@ import (
 // MatchableStatus selects the NVD CVEs vuln-finder matches: Analyzed or Modified, never Deferred or Rejected.
 const MatchableStatus = `("vulnStatus" = 'Analyzed' OR "vulnStatus" = 'Modified')`
 
+// GetVulnsByDepName is GetVulnsByDepNameContext without a deadline.
 func GetVulnsByDepName(depName string, knowledge *bun.DB) ([]knowledge_db.NVDItem, error) {
+	return GetVulnsByDepNameContext(context.Background(), depName, knowledge)
+}
+
+// GetVulnsByDepNameContext reads the matchable NVD CVEs whose affected products include depName.
+func GetVulnsByDepNameContext(ctx context.Context, depName string, knowledge *bun.DB) ([]knowledge_db.NVDItem, error) {
 	vulnerabilities := []knowledge_db.NVDItem{}
 
 	// Handle nil knowledge database gracefully
 	if knowledge == nil {
 		return vulnerabilities, nil
 	}
-
-	ctx := context.Background()
 
 	// Build the JSONB containment value safely using JSON marshaling
 	containmentValue, err := json.Marshal([]map[string]map[string]string{{"criteriaDict": {"product": depName}}})

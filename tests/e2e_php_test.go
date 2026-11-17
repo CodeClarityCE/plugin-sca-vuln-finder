@@ -10,6 +10,7 @@ import (
 	extensionMatcher "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/vulnerabilityMatcher/extensions"
 	codeclarity "github.com/CodeClarityCE/utility-types/codeclarity_db"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestE2E_PHPExtensionAnalyzer tests the PHP extension analyzer end-to-end
@@ -52,7 +53,8 @@ func TestE2E_PHPExtensionAnalyzer(t *testing.T) {
 	}
 
 	// Test vulnerability analysis (with mock knowledge DB)
-	vulnerabilities := analyzer.AnalyzeExtensionVulnerabilities(relevantExtensions, nil)
+	vulnerabilities, err := analyzer.AnalyzeExtensionVulnerabilities(relevantExtensions, nil)
+	require.NoError(t, err)
 	assert.NotNil(t, vulnerabilities, "Should return vulnerabilities list (even if empty)")
 
 	// Note: With mock knowledge DB (nil), we expect empty vulnerabilities
@@ -98,7 +100,8 @@ func TestE2E_PHPVulnerabilityPipeline(t *testing.T) {
 
 	// Test the complete vulnerability analysis pipeline
 	start := time.Now()
-	output := vulnerabilities.Start("https://github.com/test/php-project", mockSBOM, "PHP", start, nil, nil)
+	output, err := vulnerabilities.Start("https://github.com/test/php-project", mockSBOM, "PHP", start, nil, nil)
+	require.NoError(t, err)
 
 	// Verify output structure
 	assert.NotNil(t, output, "Should return vulnerability output")
@@ -131,7 +134,8 @@ func TestE2E_JavaScriptPHPMixedProject(t *testing.T) {
 
 	// Test JavaScript analysis
 	start := time.Now()
-	jsOutput := vulnerabilities.Start("https://github.com/test/js-project", mockJSSBOM, "JS", start, nil, nil)
+	jsOutput, err := vulnerabilities.Start("https://github.com/test/js-project", mockJSSBOM, "JS", start, nil, nil)
+	require.NoError(t, err)
 
 	assert.NotNil(t, jsOutput, "Should handle JS analysis")
 	assert.Equal(t, codeclarity.SUCCESS, jsOutput.AnalysisInfo.Status, "JS analysis should succeed")
@@ -145,7 +149,8 @@ func TestE2E_JavaScriptPHPMixedProject(t *testing.T) {
 	// Test PHP analysis
 	mockPHPSBOM := createMockPHPSBOM()
 	start = time.Now()
-	phpOutput := vulnerabilities.Start("https://github.com/test/php-project", mockPHPSBOM, "PHP", start, nil, nil)
+	phpOutput, err := vulnerabilities.Start("https://github.com/test/php-project", mockPHPSBOM, "PHP", start, nil, nil)
+	require.NoError(t, err)
 
 	assert.NotNil(t, phpOutput, "Should handle PHP analysis")
 	assert.Equal(t, codeclarity.SUCCESS, phpOutput.AnalysisInfo.Status, "PHP analysis should succeed")
@@ -161,7 +166,8 @@ func TestE2E_PHPVulnerabilityFields(t *testing.T) {
 	mockSBOM := createMockPHPSBOMWithVulnerabilities()
 
 	start := time.Now()
-	output := vulnerabilities.Start("https://github.com/test/php-project", mockSBOM, "PHP", start, nil, nil)
+	output, err := vulnerabilities.Start("https://github.com/test/php-project", mockSBOM, "PHP", start, nil, nil)
+	require.NoError(t, err)
 
 	assert.NotNil(t, output, "Should return output")
 
