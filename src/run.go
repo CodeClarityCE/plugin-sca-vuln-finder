@@ -3,6 +3,7 @@ package vulnerabilities
 // package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -86,7 +87,6 @@ func StartWithAdvisories(projectURL string, sbom sbomTypes.Output, languageId st
 		return outputGenerator.FailureOutput(sbom.AnalysisInfo, start), nil
 	}
 	vulnerabilityMatcher.Advisories = advisories
-	vulnerabilityMatcher.Failure = &matcher.LookupFailure{}
 	failed := func(err error) (vulnerabilityFinder.Output, error) {
 		return outputGenerator.FailureOutput(sbom.AnalysisInfo, start), err
 	}
@@ -102,7 +102,7 @@ func StartWithAdvisories(projectURL string, sbom sbomTypes.Output, languageId st
 
 	for _, workspaceKey := range workspaceKeys {
 		workspace := sbom.WorkSpaces[workspaceKey]
-		vulns, maliciousAdvisories, err := vulnerabilityMatcher.GetWorkspaceFindings(workspace.Dependencies, knowledge)
+		vulns, maliciousAdvisories, err := vulnerabilityMatcher.GetWorkspaceFindings(context.Background(), workspace.Dependencies, knowledge)
 		if err != nil {
 			return failed(err)
 		}

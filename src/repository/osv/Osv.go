@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/CodeClarityCE/plugin-sca-vuln-finder/src/repository"
@@ -56,24 +55,55 @@ func WithoutMalicious(reports []knowledge_db.OSVItem) []knowledge_db.OSVItem {
 	})
 }
 
-// GetAllOSVReportsForPurl retrieves all OSV reports for a given package URL (purl).
-// It queries both the standard OSV table and the FriendsOfPHP table for PHP packages.
-// The function returns a slice of OSVItem, which represents the OSV reports, and an error if any.
+// GetAllOSVReportsForPurl is GetAllOSVReportsForPurlContext without a deadline.
 func GetAllOSVReportsForPurl(purl string, knowledge *bun.DB) ([]knowledge_db.OSVItem, error) {
-	matches := []knowledge_db.OSVItem{}
+	return GetAllOSVReportsForPurlContext(context.Background(), purl, knowledge)
+}
 
-	// Handle nil knowledge database gracefully
+// GetAllOSVReportsForPurlContext retrieves all OSV reports for a given package URL (purl).
+// It queries both the standard OSV table and, for composer packages, the FriendsOfPHP table.
+// A failed query in either table returns an error.
+func GetAllOSVReportsForPurlContext(ctx context.Context, purl string, knowledge *bun.DB) ([]knowledge_db.OSVItem, error) {
 	if knowledge == nil {
-		return matches, nil
+		return []knowledge_db.OSVItem{}, nil
+	}
+	return allReportsForPurl(purl,
+		func() ([]knowledge_db.OSVItem, error) { return queryOSVReports(ctx, purl, knowledge) },
+		func(name, namespace string) ([]knowledge_db.FriendsOfPHPAdvisory, error) {
+			return getFriendsOfPHPReportsForPackage(ctx, name, namespace, knowledge)
+		})
+}
+
+// allReportsForPurl joins the OSV reports with the FriendsOfPHP ones of a composer package.
+func allReportsForPurl(
+	purl string,
+	osvReports func() ([]knowledge_db.OSVItem, error),
+	friendsOfPHP func(name, namespace string) ([]knowledge_db.FriendsOfPHPAdvisory, error),
+) ([]knowledge_db.OSVItem, error) {
+	matches, err := osvReports()
+	if err != nil {
+		return nil, err
 	}
 
-	ctx := context.Background()
+	purlObj, err := packageurl.FromString(purl)
+	if err == nil && purlObj.Type == "composer" {
+		advisories, err := friendsOfPHP(purlObj.Name, purlObj.Namespace)
+		if err != nil {
+			return nil, fmt.Errorf("FriendsOfPHP lookup: %w", err)
+		}
+		for _, advisory := range advisories {
+			matches = append(matches, convertFriendsOfPHPToOSV(advisory))
+		}
+	}
+	return matches, nil
+}
 
-	// Query standard OSV table using parameterized JSONB containment query
+// queryOSVReports reads the OSV reports whose affected list names purl.
+func queryOSVReports(ctx context.Context, purl string, knowledge *bun.DB) ([]knowledge_db.OSVItem, error) {
+	matches := []knowledge_db.OSVItem{}
 	containmentValue, err := json.Marshal([]map[string]map[string]string{{"package": {"purl": purl}}})
 	if err != nil {
-		log.Printf("Error marshaling OSV containment value: %v", err)
-		return matches, err
+		return nil, err
 	}
 
 	rows, err := knowledge.QueryContext(ctx, `
@@ -82,42 +112,22 @@ func GetAllOSVReportsForPurl(purl string, knowledge *bun.DB) ([]knowledge_db.OSV
 		WHERE ("affected" @> ?::jsonb)
 	`, string(containmentValue))
 	if err != nil {
-		log.Printf("Error querying OSV table: %v", err)
-		return matches, err
+		return nil, err
 	}
-
-	err = knowledge.ScanRows(ctx, rows, &matches)
-	if err != nil {
-		log.Printf("Error scanning OSV rows: %v", err)
-		return matches, err
+	if err := knowledge.ScanRows(ctx, rows, &matches); err != nil {
+		return nil, err
 	}
-
-	// Check if this is a PHP package and query FriendsOfPHP table
-	purlObj, err := packageurl.FromString(purl)
-	if err == nil && purlObj.Type == "composer" {
-		friendsOfPHPMatches, err := getFriendsOfPHPReportsForPackage(purlObj.Name, purlObj.Namespace, knowledge)
-		if err != nil {
-			return matches, fmt.Errorf("FriendsOfPHP lookup: %w", err)
-		}
-		// Convert FriendsOfPHP advisories to OSVItem format and add to matches
-		for _, advisory := range friendsOfPHPMatches {
-			matches = append(matches, convertFriendsOfPHPToOSV(advisory))
-		}
-	}
-
 	return matches, nil
 }
 
 // getFriendsOfPHPReportsForPackage queries the friends_of_php table for a specific package
-func getFriendsOfPHPReportsForPackage(name, namespace string, knowledge *bun.DB) ([]knowledge_db.FriendsOfPHPAdvisory, error) {
+func getFriendsOfPHPReportsForPackage(ctx context.Context, name, namespace string, knowledge *bun.DB) ([]knowledge_db.FriendsOfPHPAdvisory, error) {
 	var advisories []knowledge_db.FriendsOfPHPAdvisory
 
 	// Handle nil knowledge database gracefully
 	if knowledge == nil {
 		return advisories, nil
 	}
-
-	ctx := context.Background()
 
 	// Build the full package name
 	var packageName string

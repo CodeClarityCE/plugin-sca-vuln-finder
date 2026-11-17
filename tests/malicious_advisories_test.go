@@ -154,7 +154,7 @@ func TestWorkspaceFindingsReportMaliciousAdvisoriesSeparately(t *testing.T) {
 		"evil-pkg": {"1.0.0": {Direct: true}},
 	}
 
-	vulnerabilities, advisories, err := vm.GetWorkspaceFindings(dependencies, db)
+	vulnerabilities, advisories, err := vm.GetWorkspaceFindings(context.Background(), dependencies, db)
 	require.NoError(t, err)
 
 	require.Len(t, vulnerabilities, 1)
@@ -173,10 +173,10 @@ func TestWorkspaceFindingsReportMalwareListedByExactVersion(t *testing.T) {
 		PackageRepository: packageRepository.PackageRepository{},
 	}
 
-	_, listed, _ := vm.GetWorkspaceFindings(map[string]map[string]sbomTypes.Versions{
+	_, listed, _ := vm.GetWorkspaceFindings(context.Background(), map[string]map[string]sbomTypes.Versions{
 		"vl-ui-contact-card": {"10.1.1": {Direct: true}},
 	}, db)
-	_, unlisted, _ := vm.GetWorkspaceFindings(map[string]map[string]sbomTypes.Versions{
+	_, unlisted, _ := vm.GetWorkspaceFindings(context.Background(), map[string]map[string]sbomTypes.Versions{
 		"vl-ui-contact-card": {"10.1.2": {Direct: true}},
 	}, db)
 
@@ -194,7 +194,7 @@ func TestWorkspaceFindingsReportMalwareInEveryAffectedInterval(t *testing.T) {
 		PackageRepository: packageRepository.PackageRepository{},
 	}
 	flagged := func(version string) bool {
-		_, advisories, _ := vm.GetWorkspaceFindings(map[string]map[string]sbomTypes.Versions{
+		_, advisories, _ := vm.GetWorkspaceFindings(context.Background(), map[string]map[string]sbomTypes.Versions{
 			"ng2-file-upload": {version: {Direct: true}},
 		}, db)
 		return len(advisories) == 1
