@@ -9,6 +9,7 @@ import (
 	"github.com/CodeClarityCE/utility-boilerplates"
 	codeclarity "github.com/CodeClarityCE/utility-types/codeclarity_db"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLanguageDetection(t *testing.T) {
@@ -17,6 +18,8 @@ func TestLanguageDetection(t *testing.T) {
 	os.Setenv("PG_DB_PORT", "5432")
 	os.Setenv("PG_DB_USER", "postgres")
 	os.Setenv("PG_DB_PASSWORD", "!ChangeMe!")
+	// Without a database, skip after 1s instead of retrying for the default 120s.
+	os.Setenv("DB_CONNECT_MAX_WAIT_SECONDS", "1")
 
 	// Create PluginBase for testing
 	pluginBase, err := boilerplates.CreatePluginBase()
@@ -33,7 +36,8 @@ func TestLanguageDetection(t *testing.T) {
 			return
 		}
 
-		out := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge, nil)
+		out, err := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge, nil)
+		require.NoError(t, err)
 
 		assert.NotNil(t, out)
 		assert.Equal(t, codeclarity.SUCCESS, out.AnalysisInfo.Status)
@@ -47,7 +51,8 @@ func TestLanguageDetection(t *testing.T) {
 			return
 		}
 
-		out := vulnerabilities.Start("", sbom, "PHP", time.Now(), pluginBase.DB.Knowledge, nil)
+		out, err := vulnerabilities.Start("", sbom, "PHP", time.Now(), pluginBase.DB.Knowledge, nil)
+		require.NoError(t, err)
 
 		assert.NotNil(t, out)
 		assert.Equal(t, codeclarity.SUCCESS, out.AnalysisInfo.Status)
@@ -67,7 +72,8 @@ func TestLanguageDetection(t *testing.T) {
 			return
 		}
 
-		out := vulnerabilities.Start("", sbom, "PYTHON", time.Now(), pluginBase.DB.Knowledge, nil)
+		out, err := vulnerabilities.Start("", sbom, "PYTHON", time.Now(), pluginBase.DB.Knowledge, nil)
+		require.NoError(t, err)
 
 		assert.NotNil(t, out)
 		assert.Equal(t, codeclarity.FAILURE, out.AnalysisInfo.Status)

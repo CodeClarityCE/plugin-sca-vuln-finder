@@ -6,13 +6,14 @@ require (
 	github.com/CodeClarityCE/plugin-sbom-javascript v0.0.28-alpha
 	github.com/CodeClarityCE/service-knowledge v0.0.29-alpha
 	github.com/CodeClarityCE/utility-amqp-helper v0.0.15-alpha
-	github.com/CodeClarityCE/utility-boilerplates v0.0.10-alpha
+	github.com/CodeClarityCE/utility-boilerplates v0.0.11-alpha
 	github.com/CodeClarityCE/utility-dbhelper v0.0.18-alpha
 	github.com/CodeClarityCE/utility-node-semver v0.0.11-alpha
 	github.com/CodeClarityCE/utility-types v0.0.22-alpha
 	github.com/google/uuid v1.6.0
 	github.com/package-url/packageurl-go v0.1.7
 	github.com/pandatix/go-cvss v0.6.4
+	github.com/sirupsen/logrus v1.10.2
 	github.com/stretchr/testify v1.12.1
 	github.com/uptrace/bun v1.2.18
 	github.com/uptrace/bun/dialect/pgdialect v1.2.18
@@ -34,7 +35,6 @@ require (
 	github.com/rabbitmq/amqp091-go v1.15.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/schollz/progressbar/v3 v3.19.1 // indirect
-	github.com/sirupsen/logrus v1.10.2 // indirect
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect

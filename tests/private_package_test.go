@@ -9,6 +9,7 @@ import (
 	vulnerabilities "github.com/CodeClarityCE/plugin-sca-vuln-finder/src"
 	vulnerabilityFinderTypes "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/types"
 	codeclarity "github.com/CodeClarityCE/utility-types/codeclarity_db"
+	"github.com/stretchr/testify/require"
 )
 
 // TestPrivatePackageVulnerabilityDetection tests the private package vulnerability detection functionality
@@ -17,7 +18,8 @@ func TestPrivatePackageVulnerabilityDetection(t *testing.T) {
 	sbom := createMockSBOMWithPrivatePackages()
 
 	// Run vulnerability analysis
-	output := vulnerabilities.Start("https://github.com/test/project", sbom, "PHP", time.Now(), nil, nil)
+	output, err := vulnerabilities.Start("https://github.com/test/project", sbom, "PHP", time.Now(), nil, nil)
+	require.NoError(t, err)
 
 	// Validate that vulnerabilities were found
 	if output.AnalysisInfo.Status != codeclarity.SUCCESS {
@@ -48,7 +50,8 @@ func TestPrivatePackagePatternDetection(t *testing.T) {
 	sbom := createMockSBOMWithProblematicPackages()
 
 	// Run vulnerability analysis
-	output := vulnerabilities.Start("https://github.com/test/project", sbom, "PHP", time.Now(), nil, nil)
+	output, err := vulnerabilities.Start("https://github.com/test/project", sbom, "PHP", time.Now(), nil, nil)
+	require.NoError(t, err)
 
 	// Look for specific pattern-based vulnerabilities
 	expectedPatterns := []string{

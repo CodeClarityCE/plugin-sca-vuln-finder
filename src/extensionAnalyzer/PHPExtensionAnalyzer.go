@@ -12,13 +12,18 @@ import (
 
 // PHPExtensionAnalyzer analyzes PHP extensions for vulnerabilities
 type PHPExtensionAnalyzer struct {
-	matcher extensionMatcher.PHPExtensionVulnerabilityMatcher
+	matcher extensionVulnerabilityMatcher
+}
+
+// extensionVulnerabilityMatcher finds the vulnerabilities of one PHP extension.
+type extensionVulnerabilityMatcher interface {
+	MatchExtensionVulnerabilities(extensionName, extensionVersion string, knowledge *bun.DB) ([]extensionMatcher.ExtensionVulnerabilityMatch, error)
 }
 
 // NewPHPExtensionAnalyzer creates a new PHP extension analyzer
 func NewPHPExtensionAnalyzer() *PHPExtensionAnalyzer {
 	return &PHPExtensionAnalyzer{
-		matcher: extensionMatcher.PHPExtensionVulnerabilityMatcher{},
+		matcher: &extensionMatcher.PHPExtensionVulnerabilityMatcher{},
 	}
 }
 
@@ -33,7 +38,7 @@ func (analyzer *PHPExtensionAnalyzer) ExtractExtensionsFromSBOM(sbom sbomTypes.O
 func (analyzer *PHPExtensionAnalyzer) AnalyzeExtensionVulnerabilities(
 	extensions map[string]string,
 	knowledge *bun.DB,
-) []vulnerabilityFinder.Vulnerability {
+) ([]vulnerabilityFinder.Vulnerability, error) {
 
 	// Initialize empty slice instead of nil
 	vulnerabilities := make([]vulnerabilityFinder.Vulnerability, 0)
@@ -41,7 +46,7 @@ func (analyzer *PHPExtensionAnalyzer) AnalyzeExtensionVulnerabilities(
 	// Handle nil knowledge DB gracefully
 	if knowledge == nil {
 		log.Printf("Knowledge database not available, skipping extension vulnerability analysis")
-		return vulnerabilities
+		return vulnerabilities, nil
 	}
 
 	for extensionName, extensionVersion := range extensions {
@@ -50,8 +55,7 @@ func (analyzer *PHPExtensionAnalyzer) AnalyzeExtensionVulnerabilities(
 		// Match vulnerabilities for this extension
 		matches, err := analyzer.matcher.MatchExtensionVulnerabilities(extensionName, extensionVersion, knowledge)
 		if err != nil {
-			log.Printf("Error analyzing vulnerabilities for extension %s: %v", extensionName, err)
-			continue
+			return nil, fmt.Errorf("PHP extension lookup for %s: %w", extensionName, err)
 		}
 
 		// Convert matches to vulnerability objects
@@ -80,7 +84,7 @@ func (analyzer *PHPExtensionAnalyzer) AnalyzeExtensionVulnerabilities(
 	}
 
 	log.Printf("Found %d vulnerabilities in PHP extensions", len(vulnerabilities))
-	return vulnerabilities
+	return vulnerabilities, nil
 }
 
 // FilterRelevantExtensions filters extensions that are relevant for vulnerability tracking

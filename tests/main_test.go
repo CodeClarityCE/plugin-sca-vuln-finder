@@ -11,6 +11,7 @@ import (
 	"github.com/CodeClarityCE/utility-boilerplates"
 	codeclarity "github.com/CodeClarityCE/utility-types/codeclarity_db"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // setupTestEnvironment sets up the necessary environment for testing
@@ -20,6 +21,8 @@ func setupTestEnvironment(t *testing.T) (*boilerplates.PluginBase, func()) {
 	os.Setenv("PG_DB_PORT", "5432")
 	os.Setenv("PG_DB_USER", "postgres")
 	os.Setenv("PG_DB_PASSWORD", "!ChangeMe!")
+	// Without a database, skip after 1s instead of retrying for the default 120s.
+	os.Setenv("DB_CONNECT_MAX_WAIT_SECONDS", "1")
 	os.Setenv("NPM_URL", "https://replicate.npmjs.com/")
 
 	// Change to plugin root so CreatePluginBase can find config.json
@@ -61,7 +64,8 @@ func TestCreateNPMv1(t *testing.T) {
 		t.Errorf("Error getting mock SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge, nil)
+	out, err := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge, nil)
+	require.NoError(t, err)
 
 	// Assert the expected values
 	assert.NotNil(t, out)
@@ -83,7 +87,8 @@ func TestCreateNPMv2(t *testing.T) {
 		t.Errorf("Error getting mock SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge, nil)
+	out, err := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge, nil)
+	require.NoError(t, err)
 
 	// Assert the expected values
 	assert.NotNil(t, out)
@@ -105,7 +110,8 @@ func TestCreateYarnv1(t *testing.T) {
 		t.Errorf("Error getting mock SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge, nil)
+	out, err := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge, nil)
+	require.NoError(t, err)
 
 	// Assert the expected values
 	assert.NotNil(t, out)
@@ -127,7 +133,8 @@ func TestCreateYarnv2(t *testing.T) {
 		t.Errorf("Error getting mock SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge, nil)
+	out, err := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge, nil)
+	require.NoError(t, err)
 
 	// Assert the expected values
 	assert.NotNil(t, out)
@@ -149,7 +156,8 @@ func TestCreateYarnv3(t *testing.T) {
 		t.Errorf("Error getting mock SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge, nil)
+	out, err := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge, nil)
+	require.NoError(t, err)
 
 	// Assert the expected values
 	assert.NotNil(t, out)
@@ -171,7 +179,8 @@ func TestCreateYarnv4(t *testing.T) {
 		t.Errorf("Error getting mock SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge, nil)
+	out, err := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge, nil)
+	require.NoError(t, err)
 
 	// Assert the expected values
 	assert.NotNil(t, out)
@@ -193,7 +202,8 @@ func TestCreateYarnWorkspace(t *testing.T) {
 		t.Errorf("Error getting mock SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge, nil)
+	out, err := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge, nil)
+	require.NoError(t, err)
 
 	// Assert the expected values
 	assert.NotNil(t, out)
@@ -215,7 +225,8 @@ func TestCreatePNPMv10_10(t *testing.T) {
 		t.Errorf("Error getting mock SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge, nil)
+	out, err := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge, nil)
+	require.NoError(t, err)
 
 	// Assert the expected values
 	assert.NotNil(t, out)
@@ -237,7 +248,8 @@ func TestCreateTest(t *testing.T) {
 		t.Errorf("Error getting mock SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge, nil)
+	out, err := vulnerabilities.Start("", sbom, "JS", time.Now(), pluginBase.DB.Knowledge, nil)
+	require.NoError(t, err)
 
 	// Assert the expected values
 	assert.NotNil(t, out)
@@ -259,7 +271,8 @@ func TestCreatePHP(t *testing.T) {
 		t.Errorf("Error getting mock PHP SBOM: %v", err)
 	}
 
-	out := vulnerabilities.Start("", sbom, "PHP", time.Now(), pluginBase.DB.Knowledge, nil)
+	out, err := vulnerabilities.Start("", sbom, "PHP", time.Now(), pluginBase.DB.Knowledge, nil)
+	require.NoError(t, err)
 
 	// Debug output for failing tests
 	if out.AnalysisInfo.Status != codeclarity.SUCCESS {
@@ -335,7 +348,8 @@ func TestCreatePHPCachet(t *testing.T) {
 		}
 	}
 
-	out := vulnerabilities.Start("", sbom, "PHP", time.Now(), pluginBase.DB.Knowledge, nil)
+	out, err := vulnerabilities.Start("", sbom, "PHP", time.Now(), pluginBase.DB.Knowledge, nil)
+	require.NoError(t, err)
 
 	// Debug output for failing tests
 	if out.AnalysisInfo.Status != codeclarity.SUCCESS {

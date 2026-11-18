@@ -9,16 +9,19 @@ import (
 	"github.com/uptrace/bun"
 )
 
-// GetVulnsByProduct retrieves GCVE records matching a product name.
-// Uses the GIN-indexed JSONB containment query on affected_flattened.
+// GetVulnsByProduct is GetVulnsByProductContext without a deadline.
 func GetVulnsByProduct(product string, knowledge *bun.DB) ([]knowledge_db.GCVEItem, error) {
+	return GetVulnsByProductContext(context.Background(), product, knowledge)
+}
+
+// GetVulnsByProductContext retrieves GCVE records matching a product name.
+// Uses the GIN-indexed JSONB containment query on affected_flattened.
+func GetVulnsByProductContext(ctx context.Context, product string, knowledge *bun.DB) ([]knowledge_db.GCVEItem, error) {
 	vulnerabilities := []knowledge_db.GCVEItem{}
 
 	if knowledge == nil {
 		return vulnerabilities, nil
 	}
-
-	ctx := context.Background()
 
 	// Build the JSONB containment value safely using JSON marshaling
 	containmentValue, err := json.Marshal([]map[string]string{{"product": product}})
