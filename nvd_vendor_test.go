@@ -15,6 +15,16 @@ import (
 // productAdvisories serves NVD records by the CPE product they are looked up with.
 type productAdvisories map[string][]knowledge_db.NVDItem
 
+func (productAdvisories) OSVByID(context.Context, []string) ([]knowledge_db.OSVItem, error) {
+	return nil, nil
+}
+func (productAdvisories) NVDByID(context.Context, []string) ([]knowledge_db.NVDItem, error) {
+	return nil, nil
+}
+func (productAdvisories) GCVEByID(context.Context, []string) ([]knowledge_db.GCVEItem, error) {
+	return nil, nil
+}
+
 func (productAdvisories) OSV(context.Context, string) ([]knowledge_db.OSVItem, error) {
 	return nil, nil
 }

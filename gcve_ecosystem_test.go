@@ -16,6 +16,16 @@ import (
 // gcveAdvisories serves one GCVE record for every package it names and nothing from the other sources.
 type gcveAdvisories struct{ record knowledge_db.GCVEItem }
 
+func (gcveAdvisories) OSVByID(context.Context, []string) ([]knowledge_db.OSVItem, error) {
+	return nil, nil
+}
+func (gcveAdvisories) NVDByID(context.Context, []string) ([]knowledge_db.NVDItem, error) {
+	return nil, nil
+}
+func (gcveAdvisories) GCVEByID(context.Context, []string) ([]knowledge_db.GCVEItem, error) {
+	return nil, nil
+}
+
 func (gcveAdvisories) OSV(context.Context, string) ([]knowledge_db.OSVItem, error) { return nil, nil }
 func (gcveAdvisories) NVD(context.Context, string) ([]knowledge_db.NVDItem, error) { return nil, nil }
 func (g gcveAdvisories) GCVE(_ context.Context, product string) ([]knowledge_db.GCVEItem, error) {

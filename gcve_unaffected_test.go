@@ -15,6 +15,16 @@ import (
 // leftPadGCVE serves one CVE record for the npm package left-pad from GCVE and nothing from the other sources.
 type leftPadGCVE struct{ versions []knowledge_db.GCVEVersion }
 
+func (leftPadGCVE) OSVByID(context.Context, []string) ([]knowledge_db.OSVItem, error) {
+	return nil, nil
+}
+func (leftPadGCVE) NVDByID(context.Context, []string) ([]knowledge_db.NVDItem, error) {
+	return nil, nil
+}
+func (leftPadGCVE) GCVEByID(context.Context, []string) ([]knowledge_db.GCVEItem, error) {
+	return nil, nil
+}
+
 func (leftPadGCVE) OSV(context.Context, string) ([]knowledge_db.OSVItem, error) { return nil, nil }
 func (leftPadGCVE) NVD(context.Context, string) ([]knowledge_db.NVDItem, error) { return nil, nil }
 func (g leftPadGCVE) GCVE(_ context.Context, name string) ([]knowledge_db.GCVEItem, error) {

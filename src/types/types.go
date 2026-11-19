@@ -281,6 +281,14 @@ const (
 	VerdictNoRecord Verdict = "no_record"
 	// VerdictStaleOrFailed means the source had no match while stale, failed or of unknown state.
 	VerdictStaleOrFailed Verdict = "stale_or_failed"
+	// VerdictVersionExcluded means a record for the package leaves the installed version out.
+	VerdictVersionExcluded Verdict = "version_excluded"
+	// VerdictRetired means the record was rejected, withdrawn or removed.
+	VerdictRetired Verdict = "retired"
+	// VerdictNamesAnotherProduct means the record of this vulnerability names a different product or package.
+	VerdictNamesAnotherProduct Verdict = "names_another_product"
+	// VerdictNoPackageData means the record of this vulnerability names no package, like an unreviewed advisory.
+	VerdictNoPackageData Verdict = "no_package_data"
 )
 
 // SourceVerdict is one knowledge source's verdict on a vulnerability instance.
@@ -292,11 +300,34 @@ type SourceVerdict struct {
 }
 
 // SourceVerdictEvidence says what a verdict rests on; fields unused by a verdict stay empty.
+// The JSON names are stored in results and exported, so keep them stable.
 type SourceVerdictEvidence struct {
-	// RecordIds are the matched records, for a matched verdict.
+	// RecordIds are the records the verdict rests on, for every verdict but no record and stale or failed.
 	RecordIds []string `json:"record_ids,omitempty"`
 	// SourceStatus is the source's sync state ("stale", "failed" or "unknown"), for a stale or failed verdict.
 	SourceStatus string `json:"source_status,omitempty"`
+	// Evaluated is the affected ranges and versions checked against the installed version, for version excluded.
+	Evaluated *SourceAffected `json:"evaluated,omitempty"`
+	// Unaffected is the GCVE "unaffected" entry that covers the installed version, for version excluded.
+	Unaffected *SourceAffected `json:"unaffected,omitempty"`
+	// RetiredReason is "rejected", "withdrawn" or "removed", for retired.
+	RetiredReason string `json:"retired_reason,omitempty"`
+	// RetiredAt is when the record was retired (RFC 3339), for retired; empty when the source gives no date.
+	RetiredAt string `json:"retired_at,omitempty"`
+	// Names are the products or packages the record names, for names another product.
+	Names []SourceProduct `json:"names,omitempty"`
+}
+
+// SourceProduct is a product or package a record names; fields a source does not use stay empty.
+type SourceProduct struct {
+	// Ecosystem and Package name an OSV package, like "npm" and "left-pad".
+	Ecosystem string `json:"ecosystem,omitempty"`
+	Package   string `json:"package,omitempty"`
+	// Vendor and Product name a GCVE affected entry or an NVD CPE.
+	Vendor  string `json:"vendor,omitempty"`
+	Product string `json:"product,omitempty"`
+	// TargetSw is an NVD CPE's target software, like "node.js" or "wordpress".
+	TargetSw string `json:"target_sw,omitempty"`
 }
 
 // SourceAffected is the affected versions one source gives for the dependency.

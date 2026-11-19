@@ -20,6 +20,16 @@ const (
 // osvAdvisories serves one OSV advisory for left-pad below 2.0.0.
 type osvAdvisories struct{ advisory knowledge_db.OSVItem }
 
+func (osvAdvisories) OSVByID(context.Context, []string) ([]knowledge_db.OSVItem, error) {
+	return nil, nil
+}
+func (osvAdvisories) NVDByID(context.Context, []string) ([]knowledge_db.NVDItem, error) {
+	return nil, nil
+}
+func (osvAdvisories) GCVEByID(context.Context, []string) ([]knowledge_db.GCVEItem, error) {
+	return nil, nil
+}
+
 func (a osvAdvisories) OSV(_ context.Context, purl string) ([]knowledge_db.OSVItem, error) {
 	if purl != "pkg:npm/left-pad" {
 		return nil, nil

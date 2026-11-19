@@ -18,6 +18,16 @@ import (
 // leftPadAdvisories serves an OSV advisory for left-pad and, when withNVD is set, the NVD record of the same CVE.
 type leftPadAdvisories struct{ withNVD bool }
 
+func (leftPadAdvisories) OSVByID(context.Context, []string) ([]knowledge.OSVItem, error) {
+	return nil, nil
+}
+func (leftPadAdvisories) NVDByID(context.Context, []string) ([]knowledge.NVDItem, error) {
+	return nil, nil
+}
+func (leftPadAdvisories) GCVEByID(context.Context, []string) ([]knowledge.GCVEItem, error) {
+	return nil, nil
+}
+
 func (leftPadAdvisories) OSV(ctx context.Context, purl string) ([]knowledge.OSVItem, error) {
 	return osvAdvisories{}.OSV(ctx, purl)
 }

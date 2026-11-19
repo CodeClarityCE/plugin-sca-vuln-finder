@@ -18,6 +18,16 @@ import (
 // nvdAdvisories serves one NVD record for left-pad and nothing from the other sources.
 type nvdAdvisories struct{ record knowledge_db.NVDItem }
 
+func (nvdAdvisories) OSVByID(context.Context, []string) ([]knowledge_db.OSVItem, error) {
+	return nil, nil
+}
+func (nvdAdvisories) NVDByID(context.Context, []string) ([]knowledge_db.NVDItem, error) {
+	return nil, nil
+}
+func (nvdAdvisories) GCVEByID(context.Context, []string) ([]knowledge_db.GCVEItem, error) {
+	return nil, nil
+}
+
 func (nvdAdvisories) OSV(context.Context, string) ([]knowledge_db.OSVItem, error) { return nil, nil }
 func (n nvdAdvisories) NVD(_ context.Context, name string) ([]knowledge_db.NVDItem, error) {
 	if name != "left-pad" {
