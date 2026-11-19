@@ -232,10 +232,12 @@ type Vulnerability struct {
 	SourceMatches []SourceMatch `json:"SourceMatches,omitempty"`
 	// What each knowledge source said about this dependency version. Absent on older analyses.
 	SourceVerdicts []SourceVerdict `json:"SourceVerdicts,omitempty"`
-	Severity       VulnerabilityMatchSeverity
-	EPSS           *EPSS `json:"EPSS,omitempty"`
-	Weaknesses     []VulnerabilityMatchWeakness
-	Conflict       Conflict
+	// Ecosystem is the dependency's OSV ecosystem, like "npm" or "Packagist". Absent on older analyses.
+	Ecosystem  string `json:"Ecosystem,omitempty"`
+	Severity   VulnerabilityMatchSeverity
+	EPSS       *EPSS `json:"EPSS,omitempty"`
+	Weaknesses []VulnerabilityMatchWeakness
+	Conflict   Conflict
 	// Extension-related fields for PHP extension vulnerabilities
 	PackageName      string   `json:"package_name,omitempty"`
 	CurrentVersion   string   `json:"current_version,omitempty"`
@@ -320,9 +322,10 @@ type SourceVerdictEvidence struct {
 
 // SourceProduct is a product or package a record names; fields a source does not use stay empty.
 type SourceProduct struct {
-	// Ecosystem and Package name an OSV package, like "npm" and "left-pad".
+	// Ecosystem is the OSV ecosystem of the name, like "npm"; empty when the record gives none.
 	Ecosystem string `json:"ecosystem,omitempty"`
-	Package   string `json:"package,omitempty"`
+	// Package names an OSV package, like "left-pad".
+	Package string `json:"package,omitempty"`
 	// Vendor and Product name a GCVE affected entry or an NVD CPE.
 	Vendor  string `json:"vendor,omitempty"`
 	Product string `json:"product,omitempty"`

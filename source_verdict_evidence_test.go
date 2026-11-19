@@ -281,3 +281,57 @@ func TestAFailedLookupByIDFailsTheStep(t *testing.T) {
 
 	require.ErrorIs(t, err, matcher.ErrKnowledgeLookup)
 }
+
+func TestAnInstanceCarriesItsOSVEcosystem(t *testing.T) {
+	out, err := analyzeLeftPadWith(evidenceAdvisories{osv: []knowledge.OSVItem{matchingOSV()}})
+	require.NoError(t, err)
+
+	require.Len(t, out.WorkSpaces["."].Vulnerabilities, 1)
+	assert.Equal(t, "npm", out.WorkSpaces["."].Vulnerabilities[0].Ecosystem)
+}
+
+func TestAnNVDRecordNamingANodeJSProductNamesItInTheNpmEcosystem(t *testing.T) {
+	cli := knowledge.NVDItem{NVDId: evidenceCVE, Affected: []knowledge.NVDAffected{{Sources: []knowledge.Sources{{
+		Vulnerable:   true,
+		Criteria:     "cpe:2.3:a:acme:leftpad-cli:*:*:*:*:*:node.js:*:*",
+		CriteriaDict: knowledge.CriteriaDict{Part: "a", Vendor: "acme", Product: "leftpad-cli", TargetSw: "node.js"},
+	}}}}}
+
+	verdicts := evidenceVerdicts(t, evidenceAdvisories{osv: []knowledge.OSVItem{matchingOSV()}, nvdByID: []knowledge.NVDItem{cli}})
+
+	nvd := verdicts[knowledge.SourceNVD]
+	assert.Equal(t, vulnerabilityFinder.VerdictNamesAnotherProduct, nvd.Verdict)
+	assert.Equal(t, []vulnerabilityFinder.SourceProduct{{Ecosystem: "npm", Vendor: "acme", Product: "leftpad-cli", TargetSw: "node.js"}}, nvd.Evidence.Names)
+}
+
+func TestAGHSAMatchStaysVisibleWhenNVDNamesAnUpstreamProduct(t *testing.T) {
+	upstream := knowledge.NVDItem{NVDId: evidenceCVE, Affected: []knowledge.NVDAffected{{Sources: []knowledge.Sources{{
+		Vulnerable:   true,
+		Criteria:     "cpe:2.3:a:gnu:libpad:*:*:*:*:*:*:*:*",
+		CriteriaDict: knowledge.CriteriaDict{Part: "a", Vendor: "gnu", Product: "libpad", TargetSw: "*"},
+	}}}}}
+
+	out, err := analyzeLeftPadWith(evidenceAdvisories{osv: []knowledge.OSVItem{matchingOSV()}, nvdByID: []knowledge.NVDItem{upstream}})
+	require.NoError(t, err)
+
+	found := out.WorkSpaces["."].Vulnerabilities[0]
+	hidden, contradictedBy := instanceStatus(found.SourceVerdicts, found.Ecosystem)
+	assert.Equal(t, "", hidden)
+	assert.Empty(t, contradictedBy)
+}
+
+func TestAGHSAMatchIsHiddenWhenNVDNamesAnotherNpmPackage(t *testing.T) {
+	other := knowledge.NVDItem{NVDId: evidenceCVE, Affected: []knowledge.NVDAffected{{Sources: []knowledge.Sources{{
+		Vulnerable:   true,
+		Criteria:     "cpe:2.3:a:acme:leftpad-cli:*:*:*:*:*:node.js:*:*",
+		CriteriaDict: knowledge.CriteriaDict{Part: "a", Vendor: "acme", Product: "leftpad-cli", TargetSw: "node.js"},
+	}}}}}
+
+	out, err := analyzeLeftPadWith(evidenceAdvisories{osv: []knowledge.OSVItem{matchingOSV()}, nvdByID: []knowledge.NVDItem{other}})
+	require.NoError(t, err)
+
+	found := out.WorkSpaces["."].Vulnerabilities[0]
+	hidden, contradictedBy := instanceStatus(found.SourceVerdicts, found.Ecosystem)
+	assert.Equal(t, hiddenContradicted, hidden)
+	assert.Equal(t, []string{knowledge.SourceNVD}, contradictedBy)
+}
