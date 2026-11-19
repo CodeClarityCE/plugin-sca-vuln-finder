@@ -289,7 +289,8 @@ const (
 	VerdictRetired Verdict = "retired"
 	// VerdictNamesAnotherProduct means the record of this vulnerability names a different product or package.
 	VerdictNamesAnotherProduct Verdict = "names_another_product"
-	// VerdictNoPackageData means the record of this vulnerability names no package, like an unreviewed advisory.
+	// VerdictNoPackageData means the record names no package, like an unreviewed advisory,
+	// or names it with no version data that can be read.
 	VerdictNoPackageData Verdict = "no_package_data"
 )
 
