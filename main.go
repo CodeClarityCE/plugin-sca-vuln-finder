@@ -219,28 +219,31 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 
 	// Build vuln summary for notifier
 	if vulnOutput.AnalysisInfo.Status == codeclarity.SUCCESS {
-		// Extract vulnerabilities from output map
-		workspacesAny := vulnerabilityFinder.ConvertOutputToMap(vulnOutput)["workspaces"]
-		if workspaces, ok := workspacesAny.(map[string]vulnerabilityFinder.Workspace); ok {
-			summary := buildVulnSummary(workspaces)
-			log.Printf("Notification summary: %d unique vulnerabilities, max severity %s, hidden %v", summary.Total, summary.MaxSeverity, summary.HiddenCounts)
-			notif := map[string]any{
-				"type":            "vuln_summary",
-				"analysis_id":     dispatcherMessage.AnalysisId,
-				"organization_id": analysis_document.OrganizationId,
-				"project_id":      analysis_document.ProjectId,
-				"project_name":    project.Name,
-				"total":           summary.Total,
-				"severity_counts": summary.SeverityCounts,
-				"max_severity":    summary.MaxSeverity,
-				"top":             summary.Top,
-				"hidden_counts":   summary.HiddenCounts,
-			}
-			data, _ := json.Marshal(notif)
-			// A lost notification must not fail an analysis that already succeeded.
-			if err := amqp_helper.TrySend("service_notifier", data); err != nil {
-				log.Printf("Failed to send vulnerability notification: %v", err)
-			}
+		logFields := logrus.Fields{"analysis_id": dispatcherMessage.AnalysisId.String(), "project_id": project.Id.String()}
+		excluded, err := policyExcludedVulnerabilities(context.Background(), databases.Codeclarity, analysis_document, config.Name)
+		if err != nil {
+			logrus.WithFields(logFields).WithError(err).Warn("Could not read the analysis vulnerability policies")
+		}
+		summary := buildVulnSummary(vulnOutput.WorkSpaces, excluded)
+		logrus.WithFields(logFields).WithFields(logrus.Fields{
+			"total": summary.Total, "max_severity": summary.MaxSeverity, "hidden_counts": summary.HiddenCounts,
+		}).Info("Notification summary built")
+		notif := map[string]any{
+			"type":            "vuln_summary",
+			"analysis_id":     dispatcherMessage.AnalysisId,
+			"organization_id": analysis_document.OrganizationId,
+			"project_id":      analysis_document.ProjectId,
+			"project_name":    project.Name,
+			"total":           summary.Total,
+			"severity_counts": summary.SeverityCounts,
+			"max_severity":    summary.MaxSeverity,
+			"top":             summary.Top,
+			"hidden_counts":   summary.HiddenCounts,
+		}
+		data, _ := json.Marshal(notif)
+		// A lost notification must not fail an analysis that already succeeded.
+		if err := amqp_helper.TrySend("service_notifier", data); err != nil {
+			logrus.WithFields(logFields).WithError(err).Warn("Failed to send vulnerability notification")
 		}
 	}
 
@@ -258,28 +261,36 @@ type summaryVuln struct {
 }
 
 // vulnSummary is what the notifier is told about an analysis's vulnerabilities.
+// Every count is of unique vulnerability IDs, as in the default view's headline counts.
 type vulnSummary struct {
 	Total          int
 	SeverityCounts map[string]int
 	MaxSeverity    string
 	Top            []summaryVuln
-	// HiddenCounts counts the instances hidden by default, by reason; they are left out of the rest.
+	// HiddenCounts counts the vulnerabilities whose every instance is hidden by default, by reason.
 	HiddenCounts map[string]int
 }
 
-// buildVulnSummary counts each vulnerability once at its worst severity, leaving out
-// the instances the default view hides.
-func buildVulnSummary(workspaces map[string]vulnerabilityFinder.Workspace) vulnSummary {
+// buildVulnSummary counts each vulnerability once at its worst severity, leaving out the
+// instances the default view hides and the vulnerabilities a vulnerability policy excludes.
+func buildVulnSummary(workspaces map[string]vulnerabilityFinder.Workspace, excluded map[string]bool) vulnSummary {
 	summary := vulnSummary{
 		SeverityCounts: map[string]int{"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "NONE": 0},
 		MaxSeverity:    "NONE",
 		HiddenCounts:   map[string]int{hiddenContradicted: 0, hiddenRetiredAll: 0},
 	}
 	unique := map[string]summaryVuln{}
+	hiddenAs := map[string]map[string]bool{}
 	for _, ws := range workspaces {
 		for _, v := range ws.Vulnerabilities {
-			if hidden, _ := instanceStatus(v.SourceVerdicts); hidden != "" {
-				summary.HiddenCounts[hidden]++
+			if excluded[v.VulnerabilityId] {
+				continue
+			}
+			if hidden, _ := instanceStatus(v.SourceVerdicts, v.Ecosystem); hidden != "" {
+				if hiddenAs[v.VulnerabilityId] == nil {
+					hiddenAs[v.VulnerabilityId] = map[string]bool{}
+				}
+				hiddenAs[v.VulnerabilityId][hidden] = true
 				continue
 			}
 			if existing, exists := unique[v.VulnerabilityId]; !exists || v.Severity.Severity > existing.SeverityScore {
@@ -291,6 +302,14 @@ func buildVulnSummary(workspaces map[string]vulnerabilityFinder.Workspace) vulnS
 					SeverityScore:   v.Severity.Severity,
 				}
 			}
+		}
+	}
+	for id, reasons := range hiddenAs {
+		if _, shown := unique[id]; shown {
+			continue
+		}
+		for reason := range reasons {
+			summary.HiddenCounts[reason]++
 		}
 	}
 	for _, vuln := range unique {
