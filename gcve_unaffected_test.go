@@ -12,12 +12,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// gcveAdvisories serves one CVE record for left-pad from GCVE and nothing from the other sources.
-type gcveAdvisories struct{ versions []knowledge_db.GCVEVersion }
+// leftPadGCVE serves one CVE record for the npm package left-pad from GCVE and nothing from the other sources.
+type leftPadGCVE struct{ versions []knowledge_db.GCVEVersion }
 
-func (gcveAdvisories) OSV(context.Context, string) ([]knowledge_db.OSVItem, error) { return nil, nil }
-func (gcveAdvisories) NVD(context.Context, string) ([]knowledge_db.NVDItem, error) { return nil, nil }
-func (g gcveAdvisories) GCVE(_ context.Context, name string) ([]knowledge_db.GCVEItem, error) {
+func (leftPadGCVE) OSV(context.Context, string) ([]knowledge_db.OSVItem, error) { return nil, nil }
+func (leftPadGCVE) NVD(context.Context, string) ([]knowledge_db.NVDItem, error) { return nil, nil }
+func (g leftPadGCVE) GCVE(_ context.Context, name string) ([]knowledge_db.GCVEItem, error) {
 	if name != "left-pad" {
 		return nil, nil
 	}
@@ -30,6 +30,7 @@ func (g gcveAdvisories) GCVE(_ context.Context, name string) ([]knowledge_db.GCV
 			DefaultStatus: "unaffected",
 			Versions:      g.versions,
 		}},
+		References: []knowledge_db.GCVEReference{{URL: "https://www.npmjs.com/package/left-pad"}},
 	}}, nil
 }
 
@@ -50,7 +51,7 @@ func gcveReports(t *testing.T, version string, versions ...knowledge_db.GCVEVers
 		},
 		AnalysisInfo: sbomTypes.AnalysisInfo{Status: codeclarity.SUCCESS},
 	}
-	out, err := vulnerabilities.StartWithAdvisories("", sbom, "JS", time.Now(), nil, nil, gcveAdvisories{versions})
+	out, err := vulnerabilities.StartWithAdvisories("", sbom, "JS", time.Now(), nil, nil, leftPadGCVE{versions})
 	require.NoError(t, err)
 	for _, vuln := range out.WorkSpaces["."].Vulnerabilities {
 		if vuln.VulnerabilityId == "CVE-2026-4242" {
