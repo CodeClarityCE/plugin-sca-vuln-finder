@@ -24,6 +24,7 @@ import (
 	vulnerabilitylookup "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/vulnerabilityLookup"
 	codeclarity "github.com/CodeClarityCE/utility-types/codeclarity_db"
 	exceptionManager "github.com/CodeClarityCE/utility-types/exceptions"
+	knowledgeTypes "github.com/CodeClarityCE/utility-types/knowledge_db"
 	"github.com/uptrace/bun"
 
 	sbomTypes "github.com/CodeClarityCE/plugin-sbom-javascript/src/types/sbom/js"
@@ -54,12 +55,18 @@ func declareSightings(projectURL string, vulns []vulnerabilityFinder.Vulnerabili
 // non-nil, drops OSV advisories published after that day (the whole day stays
 // in range) before matching.
 func Start(projectURL string, sbom sbomTypes.Output, languageId string, start time.Time, knowledge *bun.DB, knowledgeAsOf *time.Time) (vulnerabilityFinder.Output, error) {
-	return StartWithAdvisories(projectURL, sbom, languageId, start, knowledge, knowledgeAsOf, nil)
+	return StartWithKnowledge(projectURL, sbom, languageId, start, knowledge, knowledgeAsOf, nil, nil)
 }
 
 // StartWithAdvisories is Start with the advisory lookups supplied; nil reads the knowledge database.
 // A failed knowledge lookup returns a failed output and an ErrKnowledgeLookup error.
 func StartWithAdvisories(projectURL string, sbom sbomTypes.Output, languageId string, start time.Time, knowledge *bun.DB, knowledgeAsOf *time.Time, advisories matcher.Advisories) (vulnerabilityFinder.Output, error) {
+	return StartWithKnowledge(projectURL, sbom, languageId, start, knowledge, knowledgeAsOf, nil, advisories)
+}
+
+// StartWithKnowledge is StartWithAdvisories with the knowledge snapshot the source verdicts are judged against.
+// A nil snapshot leaves every source's state unknown, so an unmatched source is stale or failed.
+func StartWithKnowledge(projectURL string, sbom sbomTypes.Output, languageId string, start time.Time, knowledge *bun.DB, knowledgeAsOf *time.Time, snapshot *knowledgeTypes.KnowledgeSnapshot, advisories matcher.Advisories) (vulnerabilityFinder.Output, error) {
 	if sbom.AnalysisInfo.Status != codeclarity.SUCCESS {
 		exceptionManager.AddError("Execution of the previous stage was unsuccessful, upon which the current stage relies", exceptionManager.PREVIOUS_STAGE_FAILED, "Execution of the previous stage was unsuccessful, upon which the current stage relies", exceptionManager.PREVIOUS_STAGE_FAILED)
 		return outputGenerator.FailureOutput(sbom.AnalysisInfo, start), nil
@@ -87,6 +94,7 @@ func StartWithAdvisories(projectURL string, sbom sbomTypes.Output, languageId st
 		return outputGenerator.FailureOutput(sbom.AnalysisInfo, start), nil
 	}
 	vulnerabilityMatcher.Advisories = advisories
+	vulnerabilityMatcher.KnowledgeSnapshot = snapshot
 	failed := func(err error) (vulnerabilityFinder.Output, error) {
 		return outputGenerator.FailureOutput(sbom.AnalysisInfo, start), err
 	}

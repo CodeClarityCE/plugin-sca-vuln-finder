@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/CodeClarityCE/plugin-sca-vuln-finder/src/repository"
@@ -204,4 +205,52 @@ func convertFriendsOfPHPToOSV(advisory knowledge_db.FriendsOfPHPAdvisory) knowle
 			"advisory_id": advisory.AdvisoryId,
 		},
 	}
+}
+
+// GetByIDsContext reads every OSV record, withdrawn ones too, whose own ID, CVE or a CVE alias is in ids.
+func GetByIDsContext(ctx context.Context, ids []string, knowledge *bun.DB) ([]knowledge_db.OSVItem, error) {
+	records := []knowledge_db.OSVItem{}
+	if knowledge == nil {
+		return records, nil
+	}
+	seen := map[string]bool{}
+	for chunk := range slices.Chunk(ids, byIDChunk) {
+		found, err := getByIDs(ctx, chunk, knowledge)
+		if err != nil {
+			return nil, err
+		}
+		for _, record := range found {
+			if !seen[record.OSVId] {
+				seen[record.OSVId] = true
+				records = append(records, record)
+			}
+		}
+	}
+	return records, nil
+}
+
+// byIDChunk caps the IDs of one query, which tests one alias containment per ID.
+const byIDChunk = 200
+
+func getByIDs(ctx context.Context, ids []string, knowledge *bun.DB) ([]knowledge_db.OSVItem, error) {
+	records := []knowledge_db.OSVItem{}
+	// One containment test per CVE alias, so the GIN index on cve_aliases is used.
+	aliases := make([]string, 0, len(ids))
+	for _, id := range ids {
+		encoded, err := json.Marshal([]string{id})
+		if err != nil {
+			return nil, err
+		}
+		aliases = append(aliases, string(encoded))
+	}
+	err := knowledge.NewSelect().Model(&records).
+		WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
+			q = q.Where("osv_id IN (?)", bun.In(ids)).WhereOr("cve IN (?)", bun.In(ids))
+			for _, alias := range aliases {
+				q = q.WhereOr("cve_aliases @> ?::jsonb", alias)
+			}
+			return q
+		}).
+		Scan(ctx)
+	return records, err
 }

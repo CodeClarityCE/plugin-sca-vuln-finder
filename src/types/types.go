@@ -25,6 +25,9 @@ const (
 	CVSS_V2  SeverityType = "CVSS_V2"
 	CVSS_V3  SeverityType = "CVSS_V3"
 	CVSS_V31 SeverityType = "CVSS_V31"
+	CVSS_V40 SeverityType = "CVSS_V40"
+	// GHSA_SEVERITY is GHSA's qualitative label, used when a record has no vector; it has no score.
+	GHSA_SEVERITY SeverityType = "GHSA"
 )
 
 type VulnerabilityMatchSeverity struct {
@@ -40,6 +43,8 @@ type VulnerabilityMatchSeverity struct {
 	ConfidentialityImpactNumerical float32
 	IntegrityImpactNumerical       float32
 	AvailabilityImpactNumerical    float32
+	// Vectors holds every CVSS vector of the shown record, the shown one included.
+	Vectors []SourceSeverity `json:"Vectors,omitempty"`
 }
 
 type WinningSource string
@@ -225,10 +230,14 @@ type Vulnerability struct {
 	AdditionalGCVEMatches []GCVEVulnerability `json:"AdditionalGCVEMatches,omitempty"`
 	// Every source match for this vulnerability and dependency, kept for comparing sources. Absent on older analyses.
 	SourceMatches []SourceMatch `json:"SourceMatches,omitempty"`
-	Severity      VulnerabilityMatchSeverity
-	EPSS          *EPSS `json:"EPSS,omitempty"`
-	Weaknesses    []VulnerabilityMatchWeakness
-	Conflict      Conflict
+	// What each knowledge source said about this dependency version. Absent on older analyses.
+	SourceVerdicts []SourceVerdict `json:"SourceVerdicts,omitempty"`
+	// Ecosystem is the dependency's OSV ecosystem, like "npm" or "Packagist". Absent on older analyses.
+	Ecosystem  string `json:"Ecosystem,omitempty"`
+	Severity   VulnerabilityMatchSeverity
+	EPSS       *EPSS `json:"EPSS,omitempty"`
+	Weaknesses []VulnerabilityMatchWeakness
+	Conflict   Conflict
 	// Extension-related fields for PHP extension vulnerabilities
 	PackageName      string   `json:"package_name,omitempty"`
 	CurrentVersion   string   `json:"current_version,omitempty"`
@@ -243,6 +252,9 @@ type Vulnerability struct {
 	ModifiedDate     string   `json:"modified_date,omitempty"`
 	WithdrawnDate    string   `json:"withdrawn_date,omitempty"`
 	ExtensionType    string   `json:"extension_type,omitempty"` // "php-extension" for PHP extensions
+
+	// Disputed is true when a matched CVE record says its vendor disputes it.
+	Disputed bool `json:"Disputed,omitempty"`
 }
 
 // SourceMatch is one knowledge source's claim that a vulnerability affects a dependency version.
@@ -255,9 +267,71 @@ type SourceMatch struct {
 	Affected SourceAffected         `json:"affected"`
 	Evidence VulnerableEvidenceType `json:"evidence"`
 	// Severity is nil when the source gives no usable CVSS score.
-	Severity  *SourceSeverity `json:"severity"`
-	Published string          `json:"published,omitempty"`
-	Modified  string          `json:"modified,omitempty"`
+	Severity *SourceSeverity `json:"severity"`
+	// Vectors holds every CVSS vector of the record.
+	Vectors   []SourceSeverity `json:"vectors,omitempty"`
+	Published string           `json:"published,omitempty"`
+	Modified  string           `json:"modified,omitempty"`
+}
+
+// Verdict is what one knowledge source said about a vulnerability instance.
+type Verdict string
+
+const (
+	VerdictMatched Verdict = "matched"
+	// VerdictNoRecord means the source was healthy and had no matching record.
+	VerdictNoRecord Verdict = "no_record"
+	// VerdictStaleOrFailed means the source had no match while stale, failed or of unknown state.
+	VerdictStaleOrFailed Verdict = "stale_or_failed"
+	// VerdictVersionExcluded means a record for the package leaves the installed version out.
+	VerdictVersionExcluded Verdict = "version_excluded"
+	// VerdictRetired means the record was rejected, withdrawn or removed.
+	VerdictRetired Verdict = "retired"
+	// VerdictNamesAnotherProduct means the record of this vulnerability names a different product or package.
+	VerdictNamesAnotherProduct Verdict = "names_another_product"
+	// VerdictNoPackageData means the record names no package, like an unreviewed advisory,
+	// or names it with no version data that can be read.
+	VerdictNoPackageData Verdict = "no_package_data"
+)
+
+// SourceVerdict is one knowledge source's verdict on a vulnerability instance.
+type SourceVerdict struct {
+	// Source is a knowledge source name: "osv", "nvd" or "gcve".
+	Source   string                 `json:"source"`
+	Verdict  Verdict                `json:"verdict"`
+	Evidence *SourceVerdictEvidence `json:"evidence,omitempty"`
+}
+
+// SourceVerdictEvidence says what a verdict rests on; fields unused by a verdict stay empty.
+// The JSON names are stored in results and exported, so keep them stable.
+type SourceVerdictEvidence struct {
+	// RecordIds are the records the verdict rests on, for every verdict but no record and stale or failed.
+	RecordIds []string `json:"record_ids,omitempty"`
+	// SourceStatus is the source's sync state ("stale", "failed" or "unknown"), for a stale or failed verdict.
+	SourceStatus string `json:"source_status,omitempty"`
+	// Evaluated is the affected ranges and versions checked against the installed version, for version excluded.
+	Evaluated *SourceAffected `json:"evaluated,omitempty"`
+	// Unaffected is the GCVE "unaffected" entry that covers the installed version, for version excluded.
+	Unaffected *SourceAffected `json:"unaffected,omitempty"`
+	// RetiredReason is "rejected", "withdrawn" or "removed", for retired.
+	RetiredReason string `json:"retired_reason,omitempty"`
+	// RetiredAt is when the record was retired (RFC 3339), for retired; empty when the source gives no date.
+	RetiredAt string `json:"retired_at,omitempty"`
+	// Names are the products or packages the record names, for names another product.
+	Names []SourceProduct `json:"names,omitempty"`
+}
+
+// SourceProduct is a product or package a record names; fields a source does not use stay empty.
+type SourceProduct struct {
+	// Ecosystem is the OSV ecosystem of the name, like "npm"; empty when the record gives none.
+	Ecosystem string `json:"ecosystem,omitempty"`
+	// Package names an OSV package, like "left-pad".
+	Package string `json:"package,omitempty"`
+	// Vendor and Product name a GCVE affected entry or an NVD CPE.
+	Vendor  string `json:"vendor,omitempty"`
+	Product string `json:"product,omitempty"`
+	// TargetSw is an NVD CPE's target software, like "node.js" or "wordpress".
+	TargetSw string `json:"target_sw,omitempty"`
 }
 
 // SourceAffected is the affected versions one source gives for the dependency.
@@ -273,7 +347,7 @@ type SourceRange struct {
 	Fixed      string `json:"fixed,omitempty"`
 }
 
-// SourceSeverity is the CVSS score one source gives.
+// SourceSeverity is the CVSS score one source gives; a GHSA label has a class and a zero score.
 type SourceSeverity struct {
 	Score  float64      `json:"score"`
 	Type   SeverityType `json:"type"`

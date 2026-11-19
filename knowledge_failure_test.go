@@ -18,6 +18,16 @@ import (
 // stubAdvisories gives no advisories, or fails every lookup with err.
 type stubAdvisories struct{ err error }
 
+func (s stubAdvisories) OSVByID(context.Context, []string) ([]knowledge_db.OSVItem, error) {
+	return nil, s.err
+}
+func (s stubAdvisories) NVDByID(context.Context, []string) ([]knowledge_db.NVDItem, error) {
+	return nil, s.err
+}
+func (s stubAdvisories) GCVEByID(context.Context, []string) ([]knowledge_db.GCVEItem, error) {
+	return nil, s.err
+}
+
 func (s stubAdvisories) OSV(context.Context, string) ([]knowledge_db.OSVItem, error) {
 	return nil, s.err
 }

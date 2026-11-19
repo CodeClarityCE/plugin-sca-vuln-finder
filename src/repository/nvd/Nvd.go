@@ -53,3 +53,13 @@ func GetVulnsByDepNameContext(ctx context.Context, depName string, knowledge *bu
 
 	return vulnerabilities, nil
 }
+
+// GetByIDsContext reads every NVD CVE, in any status, whose ID is in ids.
+func GetByIDsContext(ctx context.Context, ids []string, knowledge *bun.DB) ([]knowledge_db.NVDItem, error) {
+	records := []knowledge_db.NVDItem{}
+	if knowledge == nil || len(ids) == 0 {
+		return records, nil
+	}
+	err := knowledge.NewSelect().Model(&records).Where("nvd_id IN (?)", bun.In(ids)).Scan(ctx)
+	return records, err
+}

@@ -66,3 +66,15 @@ func GetVulnByCVEId(cveId string, knowledge *bun.DB) (*knowledge_db.GCVEItem, er
 	}
 	return item, nil
 }
+
+// GetByIDsContext reads every GCVE record, in any state, whose GCVE or CVE ID is in ids.
+func GetByIDsContext(ctx context.Context, ids []string, knowledge *bun.DB) ([]knowledge_db.GCVEItem, error) {
+	records := []knowledge_db.GCVEItem{}
+	if knowledge == nil || len(ids) == 0 {
+		return records, nil
+	}
+	err := knowledge.NewSelect().Model(&records).
+		Where("gcve_id IN (?) OR cve_id IN (?)", bun.In(ids), bun.In(ids)).
+		Scan(ctx)
+	return records, err
+}
