@@ -3,21 +3,21 @@ module github.com/CodeClarityCE/plugin-sca-vuln-finder
 go 1.27.4
 
 require (
-	github.com/CodeClarityCE/plugin-sbom-javascript v0.0.30-alpha
-	github.com/CodeClarityCE/service-knowledge v0.0.31-alpha
-	github.com/CodeClarityCE/utility-amqp-helper v0.0.17-alpha
-	github.com/CodeClarityCE/utility-boilerplates v0.0.13-alpha
-	github.com/CodeClarityCE/utility-dbhelper v0.0.20-alpha
+	github.com/CodeClarityCE/plugin-sbom-javascript v0.0.29-alpha
+	github.com/CodeClarityCE/service-knowledge v0.0.30-alpha
+	github.com/CodeClarityCE/utility-amqp-helper v0.0.16-alpha
+	github.com/CodeClarityCE/utility-boilerplates v0.0.12-alpha
+	github.com/CodeClarityCE/utility-dbhelper v0.0.19-alpha
 	github.com/CodeClarityCE/utility-node-semver v0.0.12-alpha
-	github.com/CodeClarityCE/utility-types v0.0.24-alpha
+	github.com/CodeClarityCE/utility-types v0.0.23-alpha
 	github.com/google/uuid v1.6.0
 	github.com/package-url/packageurl-go v0.1.7
 	github.com/pandatix/go-cvss v0.6.4
 	github.com/sirupsen/logrus v1.10.2
 	github.com/stretchr/testify v1.12.1
-	github.com/uptrace/bun v1.3.0
-	github.com/uptrace/bun/dialect/pgdialect v1.3.0
-	github.com/uptrace/bun/driver/pgdriver v1.3.0
+	github.com/uptrace/bun v1.2.18
+	github.com/uptrace/bun/dialect/pgdialect v1.2.18
+	github.com/uptrace/bun/driver/pgdriver v1.2.18
 )
 
 require (
