@@ -29,6 +29,17 @@ type AffectedVersion struct {
 	Exact     []AffectedExact
 	Ranges    []AffectedRange
 	Universal AffectedUniversal
+	// Versions the record marks unaffected; they override Ranges and Universal.
+	Unaffected []UnaffectedRange `json:"Unaffected,omitempty"`
+}
+
+// UnaffectedRange is a span a record marks unaffected: From <= v < Until,
+// From and later when Open, or From alone when Until is empty.
+type UnaffectedRange struct {
+	VersionString string
+	From          semverVersionTypes.Semver
+	Until         semverVersionTypes.Semver
+	Open          bool
 }
 
 // VulnerableEvidenceRange encapsulates information "prooving" that a dependency is affected
