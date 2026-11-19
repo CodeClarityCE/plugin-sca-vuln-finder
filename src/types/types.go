@@ -243,6 +243,9 @@ type Vulnerability struct {
 	ModifiedDate     string   `json:"modified_date,omitempty"`
 	WithdrawnDate    string   `json:"withdrawn_date,omitempty"`
 	ExtensionType    string   `json:"extension_type,omitempty"` // "php-extension" for PHP extensions
+
+	// Disputed is true when a matched CVE record says its vendor disputes it.
+	Disputed bool `json:"Disputed,omitempty"`
 }
 
 // SourceMatch is one knowledge source's claim that a vulnerability affects a dependency version.
