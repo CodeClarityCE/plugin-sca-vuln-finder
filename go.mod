@@ -3,13 +3,13 @@ module github.com/CodeClarityCE/plugin-sca-vuln-finder
 go 1.27.4
 
 require (
-	github.com/CodeClarityCE/plugin-sbom-javascript v0.0.31-alpha
-	github.com/CodeClarityCE/service-knowledge v0.0.32-alpha
-	github.com/CodeClarityCE/utility-amqp-helper v0.0.18-alpha
-	github.com/CodeClarityCE/utility-boilerplates v0.0.14-alpha
-	github.com/CodeClarityCE/utility-dbhelper v0.0.21-alpha
+	github.com/CodeClarityCE/plugin-sbom-javascript v0.0.32-alpha
+	github.com/CodeClarityCE/service-knowledge v0.0.33-alpha
+	github.com/CodeClarityCE/utility-amqp-helper v0.0.19-alpha
+	github.com/CodeClarityCE/utility-boilerplates v0.0.15-alpha
+	github.com/CodeClarityCE/utility-dbhelper v0.0.22-alpha
 	github.com/CodeClarityCE/utility-node-semver v0.0.12-alpha
-	github.com/CodeClarityCE/utility-types v0.0.25-alpha
+	github.com/CodeClarityCE/utility-types v0.0.26-alpha
 	github.com/google/uuid v1.6.0
 	github.com/package-url/packageurl-go v0.1.7
 	github.com/pandatix/go-cvss v0.6.4
