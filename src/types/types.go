@@ -25,6 +25,9 @@ const (
 	CVSS_V2  SeverityType = "CVSS_V2"
 	CVSS_V3  SeverityType = "CVSS_V3"
 	CVSS_V31 SeverityType = "CVSS_V31"
+	CVSS_V40 SeverityType = "CVSS_V40"
+	// GHSA_SEVERITY is GHSA's qualitative label, used when a record has no vector; it has no score.
+	GHSA_SEVERITY SeverityType = "GHSA"
 )
 
 type VulnerabilityMatchSeverity struct {
@@ -40,6 +43,8 @@ type VulnerabilityMatchSeverity struct {
 	ConfidentialityImpactNumerical float32
 	IntegrityImpactNumerical       float32
 	AvailabilityImpactNumerical    float32
+	// Vectors holds every CVSS vector of the shown record, the shown one included.
+	Vectors []SourceSeverity `json:"Vectors,omitempty"`
 }
 
 type WinningSource string
@@ -255,9 +260,11 @@ type SourceMatch struct {
 	Affected SourceAffected         `json:"affected"`
 	Evidence VulnerableEvidenceType `json:"evidence"`
 	// Severity is nil when the source gives no usable CVSS score.
-	Severity  *SourceSeverity `json:"severity"`
-	Published string          `json:"published,omitempty"`
-	Modified  string          `json:"modified,omitempty"`
+	Severity *SourceSeverity `json:"severity"`
+	// Vectors holds every CVSS vector of the record.
+	Vectors   []SourceSeverity `json:"vectors,omitempty"`
+	Published string           `json:"published,omitempty"`
+	Modified  string           `json:"modified,omitempty"`
 }
 
 // SourceAffected is the affected versions one source gives for the dependency.
@@ -273,7 +280,7 @@ type SourceRange struct {
 	Fixed      string `json:"fixed,omitempty"`
 }
 
-// SourceSeverity is the CVSS score one source gives.
+// SourceSeverity is the CVSS score one source gives; a GHSA label has a class and a zero score.
 type SourceSeverity struct {
 	Score  float64      `json:"score"`
 	Type   SeverityType `json:"type"`
