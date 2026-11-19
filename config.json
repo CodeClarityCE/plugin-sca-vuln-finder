@@ -1,6 +1,6 @@
 {
     "name": "vuln-finder",
-    "version": "v0.0.33-alpha",
+    "version": "v0.0.34-alpha",
     "image_name": "codeclarityce/plugin-vuln-finder",
     "depends_on": [
         "js-sbom",

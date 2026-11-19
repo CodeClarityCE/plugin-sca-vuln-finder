@@ -185,7 +185,7 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 	// Taken before matching so it describes the knowledge the results were built from.
 	snapshot := sourcesync.Snapshot(context.Background(), databases.Knowledge, time.Now().UTC(), knowledgeAsOf)
 	vulnOutput, failureReason = buildVulnOutput(sbomKeys, func(sbomInfo sbomKey) (vulnerabilityFinder.Output, error) {
-		output, err := analyzeSbom(databases, sbomInfo, project.Url, start, knowledgeAsOf)
+		output, err := analyzeSbom(databases, sbomInfo, project.Url, start, knowledgeAsOf, &snapshot)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
 				"analysis_id": dispatcherMessage.AnalysisId.String(),
@@ -219,86 +219,31 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 
 	// Build vuln summary for notifier
 	if vulnOutput.AnalysisInfo.Status == codeclarity.SUCCESS {
-		// Extract vulnerabilities from output map
-		workspacesAny := vulnerabilityFinder.ConvertOutputToMap(vulnOutput)["workspaces"]
-		severityCounts := map[string]int{"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "NONE": 0}
-		type topVuln struct {
-			VulnerabilityId string  `json:"vulnerability_id"`
-			Dependency      string  `json:"dependency"`
-			AffectedVersion string  `json:"affected_version"`
-			SeverityClass   string  `json:"severity_class"`
-			SeverityScore   float64 `json:"severity_score"`
+		logFields := logrus.Fields{"analysis_id": dispatcherMessage.AnalysisId.String(), "project_id": project.Id.String()}
+		excluded, err := policyExcludedVulnerabilities(context.Background(), databases.Codeclarity, analysis_document, config.Name)
+		if err != nil {
+			logrus.WithFields(logFields).WithError(err).Warn("Could not read the analysis vulnerability policies")
 		}
-
-		// Track unique vulnerabilities to avoid double counting
-		uniqueVulns := make(map[string]topVuln)
-
-		log.Printf("=== BUILDING NOTIFICATION SUMMARY ===")
-		if workspaces, ok := workspacesAny.(map[string]vulnerabilityFinder.Workspace); ok {
-			totalBeforeDedup := 0
-			for wsName, ws := range workspaces {
-				totalBeforeDedup += len(ws.Vulnerabilities)
-				log.Printf("Processing workspace '%s' with %d vulnerabilities for summary", wsName, len(ws.Vulnerabilities))
-			}
-			log.Printf("Total vulnerabilities before deduplication: %d", totalBeforeDedup)
-
-			for _, ws := range workspaces {
-				for _, v := range ws.Vulnerabilities {
-					// Only count each unique vulnerability ID once
-					if existing, exists := uniqueVulns[v.VulnerabilityId]; !exists || v.Severity.Severity > existing.SeverityScore {
-						// If new vulnerability or higher severity version found, use it
-						uniqueVulns[v.VulnerabilityId] = topVuln{
-							VulnerabilityId: v.VulnerabilityId,
-							Dependency:      v.AffectedDependency,
-							AffectedVersion: v.AffectedVersion,
-							SeverityClass:   string(v.Severity.SeverityClass),
-							SeverityScore:   v.Severity.Severity,
-						}
-					}
-				}
-			}
-
-			// Count unique vulnerabilities by severity
-			var tops []topVuln
-			for _, vuln := range uniqueVulns {
-				severityCounts[vuln.SeverityClass]++
-				tops = append(tops, vuln)
-			}
-			total := len(uniqueVulns)
-			log.Printf("After deduplication: %d unique vulnerabilities", total)
-			log.Printf("Severity counts: CRITICAL=%d, HIGH=%d, MEDIUM=%d, LOW=%d, NONE=%d",
-				severityCounts["CRITICAL"], severityCounts["HIGH"],
-				severityCounts["MEDIUM"], severityCounts["LOW"], severityCounts["NONE"])
-
-			// sort by severity desc
-			sort.Slice(tops, func(i, j int) bool { return tops[i].SeverityScore > tops[j].SeverityScore })
-			if len(tops) > 5 {
-				tops = tops[:5]
-			}
-			maxSeverity := "NONE"
-			for _, order := range []string{"CRITICAL", "HIGH", "MEDIUM", "LOW"} {
-				if severityCounts[order] > 0 {
-					maxSeverity = order
-					break
-				}
-			}
-			log.Printf("Max severity: %s", maxSeverity)
-			notif := map[string]any{
-				"type":            "vuln_summary",
-				"analysis_id":     dispatcherMessage.AnalysisId,
-				"organization_id": analysis_document.OrganizationId,
-				"project_id":      analysis_document.ProjectId,
-				"project_name":    project.Name,
-				"total":           total,
-				"severity_counts": severityCounts,
-				"max_severity":    maxSeverity,
-				"top":             tops,
-			}
-			data, _ := json.Marshal(notif)
-			// A lost notification must not fail an analysis that already succeeded.
-			if err := amqp_helper.TrySend("service_notifier", data); err != nil {
-				log.Printf("Failed to send vulnerability notification: %v", err)
-			}
+		summary := buildVulnSummary(vulnOutput.WorkSpaces, excluded)
+		logrus.WithFields(logFields).WithFields(logrus.Fields{
+			"total": summary.Total, "max_severity": summary.MaxSeverity, "hidden_counts": summary.HiddenCounts,
+		}).Info("Notification summary built")
+		notif := map[string]any{
+			"type":            "vuln_summary",
+			"analysis_id":     dispatcherMessage.AnalysisId,
+			"organization_id": analysis_document.OrganizationId,
+			"project_id":      analysis_document.ProjectId,
+			"project_name":    project.Name,
+			"total":           summary.Total,
+			"severity_counts": summary.SeverityCounts,
+			"max_severity":    summary.MaxSeverity,
+			"top":             summary.Top,
+			"hidden_counts":   summary.HiddenCounts,
+		}
+		data, _ := json.Marshal(notif)
+		// A lost notification must not fail an analysis that already succeeded.
+		if err := amqp_helper.TrySend("service_notifier", data); err != nil {
+			logrus.WithFields(logFields).WithError(err).Warn("Failed to send vulnerability notification")
 		}
 	}
 
@@ -306,8 +251,87 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 	return result, vulnOutput.AnalysisInfo.Status, nil
 }
 
+// summaryVuln is one vulnerability listed in the notification summary.
+type summaryVuln struct {
+	VulnerabilityId string  `json:"vulnerability_id"`
+	Dependency      string  `json:"dependency"`
+	AffectedVersion string  `json:"affected_version"`
+	SeverityClass   string  `json:"severity_class"`
+	SeverityScore   float64 `json:"severity_score"`
+}
+
+// vulnSummary is what the notifier is told about an analysis's vulnerabilities.
+// Every count is of unique vulnerability IDs, as in the default view's headline counts.
+type vulnSummary struct {
+	Total          int
+	SeverityCounts map[string]int
+	MaxSeverity    string
+	Top            []summaryVuln
+	// HiddenCounts counts the vulnerabilities whose every instance is hidden by default, by reason.
+	HiddenCounts map[string]int
+}
+
+// buildVulnSummary counts each vulnerability once at its worst severity, leaving out the
+// instances the default view hides and the vulnerabilities a vulnerability policy excludes.
+func buildVulnSummary(workspaces map[string]vulnerabilityFinder.Workspace, excluded map[string]bool) vulnSummary {
+	summary := vulnSummary{
+		SeverityCounts: map[string]int{"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0, "NONE": 0},
+		MaxSeverity:    "NONE",
+		HiddenCounts:   map[string]int{hiddenContradicted: 0, hiddenRetiredAll: 0},
+	}
+	unique := map[string]summaryVuln{}
+	hiddenAs := map[string]map[string]bool{}
+	for _, ws := range workspaces {
+		for _, v := range ws.Vulnerabilities {
+			if excluded[v.VulnerabilityId] {
+				continue
+			}
+			if hidden, _ := instanceStatus(v.SourceVerdicts, v.Ecosystem); hidden != "" {
+				if hiddenAs[v.VulnerabilityId] == nil {
+					hiddenAs[v.VulnerabilityId] = map[string]bool{}
+				}
+				hiddenAs[v.VulnerabilityId][hidden] = true
+				continue
+			}
+			if existing, exists := unique[v.VulnerabilityId]; !exists || v.Severity.Severity > existing.SeverityScore {
+				unique[v.VulnerabilityId] = summaryVuln{
+					VulnerabilityId: v.VulnerabilityId,
+					Dependency:      v.AffectedDependency,
+					AffectedVersion: v.AffectedVersion,
+					SeverityClass:   string(v.Severity.SeverityClass),
+					SeverityScore:   v.Severity.Severity,
+				}
+			}
+		}
+	}
+	for id, reasons := range hiddenAs {
+		if _, shown := unique[id]; shown {
+			continue
+		}
+		for reason := range reasons {
+			summary.HiddenCounts[reason]++
+		}
+	}
+	for _, vuln := range unique {
+		summary.SeverityCounts[vuln.SeverityClass]++
+		summary.Top = append(summary.Top, vuln)
+	}
+	summary.Total = len(unique)
+	sort.Slice(summary.Top, func(i, j int) bool { return summary.Top[i].SeverityScore > summary.Top[j].SeverityScore })
+	if len(summary.Top) > 5 {
+		summary.Top = summary.Top[:5]
+	}
+	for _, order := range []string{"CRITICAL", "HIGH", "MEDIUM", "LOW"} {
+		if summary.SeverityCounts[order] > 0 {
+			summary.MaxSeverity = order
+			break
+		}
+	}
+	return summary
+}
+
 // analyzeSbom loads one stored SBOM and runs vulnerability detection on it.
-func analyzeSbom(databases *boilerplates.PluginDatabases, sbomInfo sbomKey, projectUrl string, start time.Time, knowledgeAsOf *time.Time) (vulnerabilityFinder.Output, error) {
+func analyzeSbom(databases *boilerplates.PluginDatabases, sbomInfo sbomKey, projectUrl string, start time.Time, knowledgeAsOf *time.Time, snapshot *knowledge.KnowledgeSnapshot) (vulnerabilityFinder.Output, error) {
 	log.Printf("Processing SBOM: ID=%s, Language=%s, Plugin=%s", sbomInfo.id.String(), sbomInfo.language, sbomInfo.pluginName)
 
 	res := codeclarity.Result{Id: sbomInfo.id}
@@ -338,7 +362,7 @@ func analyzeSbom(databases *boilerplates.PluginDatabases, sbomInfo sbomKey, proj
 	}
 	log.Printf("Total packages across all workspaces: %d", totalPackages)
 
-	return vulnerabilities.Start(projectUrl, sbomOutput, sbomInfo.language, start, databases.Knowledge, knowledgeAsOf)
+	return vulnerabilities.StartWithKnowledge(projectUrl, sbomOutput, sbomInfo.language, start, databases.Knowledge, knowledgeAsOf, snapshot, nil)
 }
 
 // buildVulnOutput runs detection on every SBOM, or returns an empty success when there is none, and records the knowledge snapshot.
