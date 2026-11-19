@@ -185,7 +185,7 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 	// Taken before matching so it describes the knowledge the results were built from.
 	snapshot := sourcesync.Snapshot(context.Background(), databases.Knowledge, time.Now().UTC(), knowledgeAsOf)
 	vulnOutput, failureReason = buildVulnOutput(sbomKeys, func(sbomInfo sbomKey) (vulnerabilityFinder.Output, error) {
-		output, err := analyzeSbom(databases, sbomInfo, project.Url, start, knowledgeAsOf)
+		output, err := analyzeSbom(databases, sbomInfo, project.Url, start, knowledgeAsOf, &snapshot)
 		if err != nil {
 			logrus.WithFields(logrus.Fields{
 				"analysis_id": dispatcherMessage.AnalysisId.String(),
@@ -307,7 +307,7 @@ func startAnalysis(databases *boilerplates.PluginDatabases, dispatcherMessage ty
 }
 
 // analyzeSbom loads one stored SBOM and runs vulnerability detection on it.
-func analyzeSbom(databases *boilerplates.PluginDatabases, sbomInfo sbomKey, projectUrl string, start time.Time, knowledgeAsOf *time.Time) (vulnerabilityFinder.Output, error) {
+func analyzeSbom(databases *boilerplates.PluginDatabases, sbomInfo sbomKey, projectUrl string, start time.Time, knowledgeAsOf *time.Time, snapshot *knowledge.KnowledgeSnapshot) (vulnerabilityFinder.Output, error) {
 	log.Printf("Processing SBOM: ID=%s, Language=%s, Plugin=%s", sbomInfo.id.String(), sbomInfo.language, sbomInfo.pluginName)
 
 	res := codeclarity.Result{Id: sbomInfo.id}
@@ -338,7 +338,7 @@ func analyzeSbom(databases *boilerplates.PluginDatabases, sbomInfo sbomKey, proj
 	}
 	log.Printf("Total packages across all workspaces: %d", totalPackages)
 
-	return vulnerabilities.Start(projectUrl, sbomOutput, sbomInfo.language, start, databases.Knowledge, knowledgeAsOf)
+	return vulnerabilities.StartWithKnowledge(projectUrl, sbomOutput, sbomInfo.language, start, databases.Knowledge, knowledgeAsOf, snapshot, nil)
 }
 
 // buildVulnOutput runs detection on every SBOM, or returns an empty success when there is none, and records the knowledge snapshot.

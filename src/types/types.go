@@ -230,10 +230,12 @@ type Vulnerability struct {
 	AdditionalGCVEMatches []GCVEVulnerability `json:"AdditionalGCVEMatches,omitempty"`
 	// Every source match for this vulnerability and dependency, kept for comparing sources. Absent on older analyses.
 	SourceMatches []SourceMatch `json:"SourceMatches,omitempty"`
-	Severity      VulnerabilityMatchSeverity
-	EPSS          *EPSS `json:"EPSS,omitempty"`
-	Weaknesses    []VulnerabilityMatchWeakness
-	Conflict      Conflict
+	// What each knowledge source said about this dependency version. Absent on older analyses.
+	SourceVerdicts []SourceVerdict `json:"SourceVerdicts,omitempty"`
+	Severity       VulnerabilityMatchSeverity
+	EPSS           *EPSS `json:"EPSS,omitempty"`
+	Weaknesses     []VulnerabilityMatchWeakness
+	Conflict       Conflict
 	// Extension-related fields for PHP extension vulnerabilities
 	PackageName      string   `json:"package_name,omitempty"`
 	CurrentVersion   string   `json:"current_version,omitempty"`
@@ -268,6 +270,33 @@ type SourceMatch struct {
 	Vectors   []SourceSeverity `json:"vectors,omitempty"`
 	Published string           `json:"published,omitempty"`
 	Modified  string           `json:"modified,omitempty"`
+}
+
+// Verdict is what one knowledge source said about a vulnerability instance.
+type Verdict string
+
+const (
+	VerdictMatched Verdict = "matched"
+	// VerdictNoRecord means the source was healthy and had no matching record.
+	VerdictNoRecord Verdict = "no_record"
+	// VerdictStaleOrFailed means the source had no match while stale, failed or of unknown state.
+	VerdictStaleOrFailed Verdict = "stale_or_failed"
+)
+
+// SourceVerdict is one knowledge source's verdict on a vulnerability instance.
+type SourceVerdict struct {
+	// Source is a knowledge source name: "osv", "nvd" or "gcve".
+	Source   string                 `json:"source"`
+	Verdict  Verdict                `json:"verdict"`
+	Evidence *SourceVerdictEvidence `json:"evidence,omitempty"`
+}
+
+// SourceVerdictEvidence says what a verdict rests on; fields unused by a verdict stay empty.
+type SourceVerdictEvidence struct {
+	// RecordIds are the matched records, for a matched verdict.
+	RecordIds []string `json:"record_ids,omitempty"`
+	// SourceStatus is the source's sync state ("stale", "failed" or "unknown"), for a stale or failed verdict.
+	SourceStatus string `json:"source_status,omitempty"`
 }
 
 // SourceAffected is the affected versions one source gives for the dependency.
