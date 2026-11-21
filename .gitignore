@@ -1,3 +1,6 @@
 .netrc
 .DS_Store
 tmp
+# Local go build output
+/plugin-sca-vuln-finder
+/coverage.out
