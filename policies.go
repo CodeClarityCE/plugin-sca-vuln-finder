@@ -41,7 +41,7 @@ func policyExcludedVulnerabilities(ctx context.Context, db *bun.DB, analysis cod
 		TableExpr("policy AS p").
 		ColumnExpr("p.content").
 		Join(`JOIN organization_policies_policy AS op ON op."policyId" = p.id`).
-		Where("p.id::text IN (?)", bun.In(ids)).
+		Where("p.id::text IN (?)", bun.List(ids)).
 		Where("p.policy_type = ?", "VULNERABILITY_POLICY").
 		Where(`op."organizationId" = ?`, analysis.OrganizationId).
 		Scan(ctx, &contents)

@@ -470,6 +470,6 @@ func (ppa *PrivatePackageAnalyzer) createSeverity(severityLevel string) vulnerab
 		SeverityClass: severityClass,
 		Severity:      severityScore,
 		SeverityType:  vulnerabilityFinderTypes.CVSS_V3,
-		Vector:        fmt.Sprintf("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:L"),
+		Vector:        "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:L",
 	}
 }
