@@ -2,18 +2,16 @@ package main
 
 import (
 	"context"
-	"strings"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/dialect/pgdialect"
 
 	"github.com/CodeClarityCE/plugin-sca-vuln-finder/src/repository/gcve"
 	"github.com/CodeClarityCE/plugin-sca-vuln-finder/src/repository/nvd"
 	"github.com/CodeClarityCE/plugin-sca-vuln-finder/src/repository/osv"
+	"github.com/CodeClarityCE/utility-boilerplates/testdeps"
 )
 
 const recordsByIDSchema = `
@@ -61,22 +59,8 @@ INSERT INTO gcve (gcve_id, cve_id, state, affected, retired_reason, retired_at) 
 
 func recordsByIDDB(t *testing.T) *bun.DB {
 	t.Helper()
-	ctx := context.Background()
-	admin := openDatabase("postgres")
-	if err := admin.PingContext(ctx); err != nil {
-		admin.Close()
-		t.Skipf("Skipping test due to database connection error: %v", err)
-	}
-	name := "records_by_id_test_" + strings.ReplaceAll(uuid.NewString(), "-", "")
-	_, err := admin.ExecContext(ctx, "CREATE DATABASE "+name)
-	require.NoError(t, err)
-	db := bun.NewDB(openDatabase(name), pgdialect.New())
-	t.Cleanup(func() {
-		db.Close()
-		_, _ = admin.ExecContext(ctx, "DROP DATABASE "+name+" WITH (FORCE)")
-		admin.Close()
-	})
-	_, err = db.ExecContext(ctx, recordsByIDSchema)
+	db := testdeps.Postgres(t)
+	_, err := db.ExecContext(context.Background(), recordsByIDSchema)
 	require.NoError(t, err)
 	return db
 }

@@ -2,19 +2,11 @@ package main
 
 import (
 	"context"
-	"database/sql"
-	"fmt"
-	"net/url"
-	"os"
-	"strings"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/dialect/pgdialect"
-	"github.com/uptrace/bun/driver/pgdriver"
 
 	sbomTypes "github.com/CodeClarityCE/plugin-sbom-javascript/src/types/sbom/js"
 	"github.com/CodeClarityCE/plugin-sca-vuln-finder/src/conflictResolver"
@@ -22,6 +14,7 @@ import (
 	packageRepository "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/repository"
 	"github.com/CodeClarityCE/plugin-sca-vuln-finder/src/repository/osv"
 	matcher "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/vulnerabilityMatcher"
+	"github.com/CodeClarityCE/utility-boilerplates/testdeps"
 	knowledge_db "github.com/CodeClarityCE/utility-types/knowledge_db"
 )
 
@@ -76,43 +69,11 @@ INSERT INTO package (name) VALUES ('ng2-file-upload');
 INSERT INTO version (package_id, version)
 	SELECT id, v FROM package, unnest(ARRAY['7.0.1','7.0.2','7.0.3','7.0.4','8.0.1','8.0.2','8.0.3','8.0.4']) v;`
 
-func envOr(key, fallback string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return fallback
-}
-
-func openDatabase(name string) *sql.DB {
-	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
-		url.QueryEscape(envOr("PG_DB_USER", "postgres")),
-		url.QueryEscape(envOr("PG_DB_PASSWORD", "!ChangeMe!")),
-		envOr("PG_DB_HOST", "127.0.0.1"),
-		envOr("PG_DB_PORT", "5432"),
-		name)
-	return sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
-}
-
-// maliciousAdvisoriesDB creates a throwaway knowledge database and drops it after the test.
+// maliciousAdvisoriesDB returns a throwaway knowledge database holding the rows above.
 func maliciousAdvisoriesDB(t *testing.T) *bun.DB {
 	t.Helper()
-	ctx := context.Background()
-	admin := openDatabase("postgres")
-	if err := admin.PingContext(ctx); err != nil {
-		admin.Close()
-		t.Skipf("Skipping test due to database connection error: %v", err)
-	}
-	name := "malicious_test_" + strings.ReplaceAll(uuid.NewString(), "-", "")
-	_, err := admin.ExecContext(ctx, "CREATE DATABASE "+name)
-	require.NoError(t, err)
-
-	db := bun.NewDB(openDatabase(name), pgdialect.New())
-	t.Cleanup(func() {
-		db.Close()
-		_, _ = admin.ExecContext(ctx, "DROP DATABASE "+name+" WITH (FORCE)")
-		admin.Close()
-	})
-	_, err = db.ExecContext(ctx, maliciousAdvisoriesSchema)
+	db := testdeps.Postgres(t)
+	_, err := db.ExecContext(context.Background(), maliciousAdvisoriesSchema)
 	require.NoError(t, err)
 	return db
 }
