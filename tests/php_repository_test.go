@@ -46,3 +46,26 @@ func TestPHPPackageNaming(t *testing.T) {
 		assert.True(t, len(pkg) > 3)
 	}
 }
+
+func TestPHPRepositoryHandlesAnUnknownPackage(t *testing.T) {
+	db := knowledgeDB(t, "")
+	repo := phpRepository.PhpPackageRepository
+
+	versions, err := repo.GetVersionStrings("non-existent/package", db)
+	assert.NoError(t, err)
+	assert.Empty(t, versions)
+
+	versionsBelow, err := repo.GetVersionStringsBelow("non-existent/package", "1.0.0", 10, db)
+	assert.NoError(t, err)
+	assert.Empty(t, versionsBelow)
+
+	versionsAbove, err := repo.GetVersionStringsAbove("non-existent/package", "1.0.0", 10, db)
+	assert.NoError(t, err)
+	assert.Empty(t, versionsAbove)
+
+	_, err = repo.GetFirstVersionString("non-existent/package", db)
+	assert.ErrorContains(t, err, "no versions")
+
+	_, err = repo.GetLastVersionString("non-existent/package", db)
+	assert.ErrorContains(t, err, "no versions")
+}
