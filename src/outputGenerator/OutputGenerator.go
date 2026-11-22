@@ -41,9 +41,3 @@ func FailureOutput(sbomAnalysisInfo sbomTypes.AnalysisInfo, start time.Time) vul
 		WorkSpaces: map[string]vulnerabilityFinder.Workspace{},
 	}
 }
-
-// getAnalysisTiming calculates the analysis timing by measuring the elapsed time between the start and end points.
-// It returns the start time, end time, and elapsed time in seconds.
-func getAnalysisTiming(start time.Time) (string, string, float64) {
-	return start.Local().String(), time.Now().Local().String(), time.Since(start).Seconds()
-}

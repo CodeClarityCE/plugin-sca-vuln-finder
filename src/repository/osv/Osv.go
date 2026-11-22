@@ -245,7 +245,7 @@ func getByIDs(ctx context.Context, ids []string, knowledge *bun.DB) ([]knowledge
 	}
 	err := knowledge.NewSelect().Model(&records).
 		WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
-			q = q.Where("osv_id IN (?)", bun.In(ids)).WhereOr("cve IN (?)", bun.In(ids))
+			q = q.Where("osv_id IN (?)", bun.List(ids)).WhereOr("cve IN (?)", bun.List(ids))
 			for _, alias := range aliases {
 				q = q.WhereOr("cve_aliases @> ?::jsonb", alias)
 			}
