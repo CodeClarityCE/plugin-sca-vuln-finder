@@ -74,7 +74,7 @@ func GetByIDsContext(ctx context.Context, ids []string, knowledge *bun.DB) ([]kn
 		return records, nil
 	}
 	err := knowledge.NewSelect().Model(&records).
-		Where("gcve_id IN (?) OR cve_id IN (?)", bun.In(ids), bun.In(ids)).
+		Where("gcve_id IN (?) OR cve_id IN (?)", bun.List(ids), bun.List(ids)).
 		Scan(ctx)
 	return records, err
 }
