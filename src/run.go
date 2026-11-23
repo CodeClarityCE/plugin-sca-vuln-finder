@@ -42,7 +42,7 @@ func declareSightings(projectURL string, vulns []vulnerabilityFinder.Vulnerabili
 		return
 	}
 	body, err := io.ReadAll(resp.Body)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	if err != nil || resp.StatusCode == 403 || strings.Contains(string(body), "Page not found") {
 		return
 	}

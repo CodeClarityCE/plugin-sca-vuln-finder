@@ -2,16 +2,15 @@ package main
 
 import (
 	"encoding/json"
+	"io/fs"
 	"os"
 
 	sbomTypes "github.com/CodeClarityCE/plugin-sbom-javascript/src/types/sbom/js"
 )
 
 func getSBOM(folder string) (sbomTypes.Output, error) {
-	filePath := folder + "/sbom.json"
-
-	// Read the JSON file
-	jsonData, err := os.ReadFile(filePath)
+	// Read the JSON file inside the fixture folder
+	jsonData, err := fs.ReadFile(os.DirFS(folder), "sbom.json")
 	if err != nil {
 		return sbomTypes.Output{}, err
 	}

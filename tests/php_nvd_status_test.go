@@ -3,16 +3,14 @@ package main
 import (
 	"context"
 	"sort"
-	"strings"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/dialect/pgdialect"
 
 	frameworkMatcher "github.com/CodeClarityCE/plugin-sca-vuln-finder/src/vulnerabilityMatcher/frameworks"
+	"github.com/CodeClarityCE/utility-boilerplates/testdeps"
 	knowledge_db "github.com/CodeClarityCE/utility-types/knowledge_db"
 )
 
@@ -20,22 +18,8 @@ import (
 func nvdStatusDB(t *testing.T) *bun.DB {
 	t.Helper()
 	ctx := context.Background()
-	admin := openDatabase("postgres")
-	if err := admin.PingContext(ctx); err != nil {
-		admin.Close()
-		t.Skipf("Skipping test due to database connection error: %v", err)
-	}
-	name := "nvd_status_test_" + strings.ReplaceAll(uuid.NewString(), "-", "")
-	_, err := admin.ExecContext(ctx, "CREATE DATABASE "+name)
-	require.NoError(t, err)
-
-	db := bun.NewDB(openDatabase(name), pgdialect.New())
-	t.Cleanup(func() {
-		db.Close()
-		_, _ = admin.ExecContext(ctx, "DROP DATABASE "+name+" WITH (FORCE)")
-		admin.Close()
-	})
-	_, err = db.ExecContext(ctx, `CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`)
+	db := testdeps.Postgres(t)
+	_, err := db.ExecContext(ctx, `CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`)
 	require.NoError(t, err)
 	_, err = db.NewCreateTable().Model((*knowledge_db.NVDItem)(nil)).Exec(ctx)
 	require.NoError(t, err)

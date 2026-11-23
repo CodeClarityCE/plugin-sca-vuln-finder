@@ -60,6 +60,6 @@ func GetByIDsContext(ctx context.Context, ids []string, knowledge *bun.DB) ([]kn
 	if knowledge == nil || len(ids) == 0 {
 		return records, nil
 	}
-	err := knowledge.NewSelect().Model(&records).Where("nvd_id IN (?)", bun.In(ids)).Scan(ctx)
+	err := knowledge.NewSelect().Model(&records).Where("nvd_id IN (?)", bun.List(ids)).Scan(ctx)
 	return records, err
 }
