@@ -188,6 +188,25 @@ func TestAGCVEUnaffectedEntryGivesVersionExcludedWithTheEntry(t *testing.T) {
 	assert.Equal(t, []vulnerabilityFinder.SourceRange{{Introduced: "1.3.0", Fixed: "2.0.0"}}, gcve.Evidence.Unaffected.Ranges)
 }
 
+func TestAGCVEUnaffectedComparatorGivesVersionExcludedWithItsBounds(t *testing.T) {
+	record := knowledge.GCVEItem{
+		CVEId:         evidenceCVE,
+		DatePublished: "2024-01-01T00:00:00Z",
+		Affected: []knowledge.GCVEAffected{{
+			Vendor: "left-pad_project", Product: "left-pad", DefaultStatus: "unaffected",
+			Versions: []knowledge.GCVEVersion{affected("1.0.0", "2.0.0"), unaffected(">= 1.2.0, < 1.4.0")},
+		}},
+		References: []knowledge.GCVEReference{{URL: "https://www.npmjs.com/package/left-pad"}},
+	}
+
+	verdicts := evidenceVerdicts(t, evidenceAdvisories{osv: []knowledge.OSVItem{matchingOSV()}, gcve: []knowledge.GCVEItem{record}})
+
+	gcve := verdicts[knowledge.SourceGCVE]
+	assert.Equal(t, vulnerabilityFinder.VerdictVersionExcluded, gcve.Verdict)
+	require.NotNil(t, gcve.Evidence.Unaffected)
+	assert.Equal(t, []vulnerabilityFinder.SourceRange{{Introduced: "1.2.0", Fixed: "1.4.0"}}, gcve.Evidence.Unaffected.Ranges)
+}
+
 func TestAGCVERecordForAnotherProductOfTheSameNameGivesNamesAnotherProduct(t *testing.T) {
 	plugin := knowledge.GCVEItem{
 		CVEId:         evidenceCVE,
