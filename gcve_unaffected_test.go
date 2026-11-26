@@ -139,3 +139,27 @@ func TestAnUnaffectedExactVersionIsNotReported(t *testing.T) {
 	require.True(t, gcveReports(t, "1.9.8", versions...))
 	require.False(t, gcveReports(t, "1.9.9", versions...))
 }
+
+func TestAnUnaffectedComparatorExcludesTheVersionsItCovers(t *testing.T) {
+	versions := []knowledge_db.GCVEVersion{affected("0", "2.0.0"), unaffected("< 1.2.3")}
+	require.False(t, gcveReports(t, "1.2.2", versions...))
+	require.True(t, gcveReports(t, "1.2.3", versions...))
+}
+
+func TestAnOpenUnaffectedComparatorExcludesEveryLaterVersion(t *testing.T) {
+	versions := []knowledge_db.GCVEVersion{affected("0", "2.0.0"), unaffected(">= 1.5.0")}
+	require.True(t, gcveReports(t, "1.4.9", versions...))
+	require.False(t, gcveReports(t, "1.5.0", versions...))
+}
+
+func TestAnUnaffectedComparatorRangeExcludesOnlyItsSpan(t *testing.T) {
+	versions := []knowledge_db.GCVEVersion{affected("0", "2.0.0"), unaffected(">= 1.4.0, < 1.5.0")}
+	require.True(t, gcveReports(t, "1.3.9", versions...))
+	require.False(t, gcveReports(t, "1.4.5", versions...))
+	require.True(t, gcveReports(t, "1.5.0", versions...))
+}
+
+func TestAnUnreadableUnaffectedComparatorExcludesNothing(t *testing.T) {
+	versions := []knowledge_db.GCVEVersion{affected("0", "2.0.0"), unaffected("< unspecified")}
+	require.True(t, gcveReports(t, "1.0.0", versions...))
+}
