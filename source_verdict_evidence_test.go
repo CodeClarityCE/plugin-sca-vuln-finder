@@ -188,6 +188,40 @@ func TestAGCVEUnaffectedEntryGivesVersionExcludedWithTheEntry(t *testing.T) {
 	assert.Equal(t, []vulnerabilityFinder.SourceRange{{Introduced: "1.3.0", Fixed: "2.0.0"}}, gcve.Evidence.Unaffected.Ranges)
 }
 
+func TestAGCVEUnaffectedComparatorGivesVersionExcludedWithItsBounds(t *testing.T) {
+	tests := []struct {
+		comparator string
+		want       vulnerabilityFinder.SourceRange
+	}{
+		{">= 1.2.0, < 1.4.0", vulnerabilityFinder.SourceRange{Introduced: "1.2.0", Fixed: "1.4.0"}},
+		{"< 1.4.0", vulnerabilityFinder.SourceRange{Fixed: "1.4.0"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.comparator, func(t *testing.T) {
+			gcve := gcveVerdictWithUnaffected(t, tt.comparator)
+			assert.Equal(t, vulnerabilityFinder.VerdictVersionExcluded, gcve.Verdict)
+			require.NotNil(t, gcve.Evidence.Unaffected)
+			assert.Equal(t, []vulnerabilityFinder.SourceRange{tt.want}, gcve.Evidence.Unaffected.Ranges)
+		})
+	}
+}
+
+// gcveVerdictWithUnaffected is the GCVE verdict for a left-pad record affecting 1.x with one unaffected version string.
+func gcveVerdictWithUnaffected(t *testing.T, version string) vulnerabilityFinder.SourceVerdict {
+	t.Helper()
+	record := knowledge.GCVEItem{
+		CVEId:         evidenceCVE,
+		DatePublished: "2024-01-01T00:00:00Z",
+		Affected: []knowledge.GCVEAffected{{
+			Vendor: "left-pad_project", Product: "left-pad", DefaultStatus: "unaffected",
+			Versions: []knowledge.GCVEVersion{affected("1.0.0", "2.0.0"), unaffected(version)},
+		}},
+		References: []knowledge.GCVEReference{{URL: "https://www.npmjs.com/package/left-pad"}},
+	}
+	verdicts := evidenceVerdicts(t, evidenceAdvisories{osv: []knowledge.OSVItem{matchingOSV()}, gcve: []knowledge.GCVEItem{record}})
+	return verdicts[knowledge.SourceGCVE]
+}
+
 func TestAGCVERecordForAnotherProductOfTheSameNameGivesNamesAnotherProduct(t *testing.T) {
 	plugin := knowledge.GCVEItem{
 		CVEId:         evidenceCVE,
