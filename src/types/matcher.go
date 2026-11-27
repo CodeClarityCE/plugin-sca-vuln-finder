@@ -33,6 +33,8 @@ type AffectedVersion struct {
 	Universal AffectedUniversal
 	// Versions the record marks unaffected; they override Ranges and Universal.
 	Unaffected []UnaffectedRange `json:"Unaffected,omitempty"`
+	// Versions the record marks of unknown status; they override Universal only.
+	Unknown []UnaffectedRange `json:"Unknown,omitempty"`
 }
 
 // UnaffectedRange is a span a record marks unaffected: From <= v < Until,
