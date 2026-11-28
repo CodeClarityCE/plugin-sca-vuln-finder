@@ -13,6 +13,8 @@ type AffectedExact struct {
 
 type AffectedUniversal struct {
 	CPEInfo knowledge.Sources
+	// AllVersions is set when a record states every version is affected, with no version bounds.
+	AllVersions bool
 }
 
 // AffectedRange represents a vulnerable range of a library, denoting at which version the
@@ -31,6 +33,8 @@ type AffectedVersion struct {
 	Universal AffectedUniversal
 	// Versions the record marks unaffected; they override Ranges and Universal.
 	Unaffected []UnaffectedRange `json:"Unaffected,omitempty"`
+	// Versions the record marks of unknown status; they override Universal only.
+	Unknown []UnaffectedRange `json:"Unknown,omitempty"`
 }
 
 // UnaffectedRange is a span a record marks unaffected: From <= v < Until,

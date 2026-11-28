@@ -4,7 +4,7 @@ go 1.27.4
 
 require (
 	github.com/CodeClarityCE/plugin-sbom-javascript v0.0.37-alpha
-	github.com/CodeClarityCE/service-knowledge v0.0.41-alpha
+	github.com/CodeClarityCE/service-knowledge v0.0.42-alpha
 	github.com/CodeClarityCE/utility-amqp-helper v0.0.24-alpha
 	github.com/CodeClarityCE/utility-boilerplates v0.0.20-alpha
 	github.com/CodeClarityCE/utility-node-semver v0.0.16-alpha
